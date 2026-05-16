@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_frontend/features/dashboard/logic/menu_app_controller.dart';
+import 'features/auth/logic/auth_provider.dart';
+import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/dashboard/presentation/screens/main/main_screen.dart';
+import 'features/profile/presentation/screens/profile_screen.dart';
+import 'package:flutter_frontend/features/ia_prediction/logic/prediction_provider.dart';
+import 'package:flutter_frontend/features/dashboard/logic/doctor_provider.dart';
+import 'core/app_theme.dart';
+
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => MenuAppController()),
+        ChangeNotifierProvider(create: (_) => IaPredictionProvider()),
+        ChangeNotifierProvider(create: (_) => DoctorProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Cardio Project',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: const SplashScreen(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/dashboard': (context) => MainScreen(),
+        '/profile': (context) => const ProfileScreen(),
+      },
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuth();
+    });
+  }
+
+  Future<void> _checkAuth() async {
+    final auth = context.read<AuthProvider>();
+    await auth.loadUser();
+    if (mounted) {
+      if (auth.user != null) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
