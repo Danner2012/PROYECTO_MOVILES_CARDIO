@@ -7,6 +7,7 @@ import 'features/dashboard/presentation/screens/main/main_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'package:flutter_frontend/features/ia_prediction/logic/prediction_provider.dart';
 import 'package:flutter_frontend/features/dashboard/logic/doctor_provider.dart';
+import 'package:flutter_frontend/features/ollama/logic/ollama_provider.dart';
 import 'core/app_theme.dart';
 
 void main() {
@@ -17,6 +18,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => MenuAppController()),
         ChangeNotifierProvider(create: (_) => IaPredictionProvider()),
         ChangeNotifierProvider(create: (_) => DoctorProvider()),
+        ChangeNotifierProvider(create: (_) => OllamaProvider()),
       ],
       child: const MyApp(),
     ),

@@ -15,24 +15,23 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menuController = Provider.of<MenuAppController>(context);
+    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       key: menuController.scaffoldKey,
-      drawer: SideMenu(),
+      // Solo mostramos el drawer si NO es escritorio, 
+      // para evitar duplicar el SideMenu (y sus llaves) en el árbol de widgets.
+      drawer: !isDesktop ? const SideMenu() : null,
       body: SafeArea(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // We want this side menu only for large screen
-            if (Responsive.isDesktop(context))
-              Expanded(
-                // default flex = 1
-                // and it takes 1/6 part of the screen
+            if (isDesktop)
+              const Expanded(
                 child: SideMenu(),
               ),
             Expanded(
-              // It takes 5/6 part of the screen
               flex: 5,
               child: _getContent(menuController.selectedPage),
             ),
