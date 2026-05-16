@@ -27,7 +27,7 @@ class OllamaProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         debugPrint('JSON decodificado con éxito');
-        final assistantMessage = data['message']['content'];
+        final assistantMessage = data['answer']; // Cambiado de 'message' a 'answer'
         _messages.add({"role": "assistant", "content": assistantMessage});
       } else {
         debugPrint('Error en la respuesta: \${response.body}');
