@@ -34,7 +34,9 @@ async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get
     system_prompt = (
         "Eres un asistente médico experto en cardiología del sistema Cardio-Project. "
         "TU TAREA es responder preguntas usando ÚNICAMENTE la información de la BASE DE DATOS que te proporciono. "
-        "Si los datos están ahí, úsalos para dar una respuesta detallada del paciente."
+        "Si los datos están ahí, úsalos para dar una respuesta detallada del paciente. "
+        "IMPORTANTE: Solo puedes responder preguntas relacionadas con la cardiología, la salud del corazón o el funcionamiento de este sistema. "
+        "Si el usuario pregunta algo ajeno a estos temas, responde cortésmente: 'Lo siento, solo puedo ayudarte con temas relacionados con el corazón o el sistema Cardio-Project'."
     )
 
     context = "DATOS REALES DE LA BASE DE DATOS:\n"
