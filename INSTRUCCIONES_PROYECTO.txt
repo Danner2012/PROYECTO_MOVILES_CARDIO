@@ -1,0 +1,99 @@
+============================================================
+GUÍA DE CONFIGURACIÓN DEL PROYECTO - CARDIOLOGÍA
+============================================================
+
+Sigue estos pasos detallados para levantar todo el ecosistema del proyecto 
+después de clonarlo.
+
+1. REQUISITOS PREVIOS
+------------------------------------------------------------
+Asegúrate de tener instalado:
+- Python 3.10 o superior
+- Node.js (para el frontend web)
+- Flutter SDK (para la app móvil)
+- PostgreSQL y pgAdmin 4
+- Ollama (descregado e instalado de ollama.com)
+
+2. CONFIGURACIÓN DE LA BASE DE DATOS (PostgreSQL)
+------------------------------------------------------------
+Antes de ejecutar el backend, debes preparar la base de datos:
+
+1. Abre pgAdmin 4.
+2. Crea una nueva base de datos (Database) con el nombre: proyecto_cardio
+3. Ve a la carpeta `backend/` y localiza el archivo `.env`.
+4. Abre el archivo `.env` y asegúrate de que los datos coincidan con tu configuración local:
+   - DB_NAME=proyecto_cardio
+   - DB_USER=tu_usuario_de_postgres (normalmente 'postgres')
+   - DB_PASSWORD=tu_contraseña_de_postgres
+   - DB_HOST=localhost
+   - DB_PORT=5432
+
+3. CONFIGURACIÓN DE OLLAMA (IA)
+------------------------------------------------------------
+Para que Ollama acepte conexiones desde el navegador y otros dispositivos:
+
+En Windows (CMD):
+   set OLLAMA_HOST=0.0.0.0
+   set OLLAMA_ORIGINS=*
+   ollama serve
+
+En PowerShell:
+   $env:OLLAMA_HOST = "0.0.0.0"
+   $env:OLLAMA_ORIGINS = "*"
+   ollama serve
+
+*Nota: Debes dejar esa terminal abierta.*
+
+4. CONFIGURACIÓN DEL BACKEND (DJANGO)
+------------------------------------------------------------
+1. Entra a la carpeta backend:
+   cd backend
+
+2. Crea y activa el entorno virtual:
+   python -m venv venv
+   venv\Scripts\activate
+
+3. Instala las librerías necesarias:
+   pip install django djangorestframework django-cors-headers python-dotenv pillow fastapi uvicorn sqlalchemy psycopg2
+
+4. Aplica las migraciones a la base de datos de PostgreSQL:
+   python manage.py migrate
+
+5. Inicia el servidor de Django:
+   python manage.py runserver
+
+5. CONFIGURACIÓN DE LA API OLLAMA (FASTAPI)
+------------------------------------------------------------
+Abre una NUEVA terminal y activa el mismo entorno virtual:
+
+1. Ve a la carpeta de la API de Ollama:
+   cd backend/ollama_api
+
+2. Inicia la API:
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+6. CONFIGURACIÓN DEL FRONTEND WEB (REACT)
+------------------------------------------------------------
+Abre una NUEVA terminal:
+
+1. Entra a la carpeta frontend:
+   cd frontend
+
+2. Instala dependencias e inicia:
+   npm install
+   npm run dev
+
+7. CONFIGURACIÓN DE FLUTTER (APP MÓVIL)
+------------------------------------------------------------
+1. Entra a la carpeta flutter_frontend:
+   cd flutter_frontend
+
+2. Obtén los paquetes y ejecuta:
+   flutter pub get
+   flutter run
+
+============================================================
+NOTAS ADICIONALES:
+- PostgreSQL: Es obligatorio tener instalado `psycopg2` (ya incluido en el paso 4).
+- IP LOCAL: Si usas la app en un móvil físico, cambia "localhost" por tu IP local.
+============================================================
