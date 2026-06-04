@@ -6,15 +6,14 @@ import json
 from database import get_db, engine
 import models, schemas, crud
 
-# Crear tablas si no existen
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cardio Ollama API")
 
-# Configuración de CORS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,36 +23,32 @@ OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 
 @app.post("/chat", response_model=schemas.ChatResponse)
 async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get_db)):
-    # 1. Buscar registros relacionados en la BD
     matched_records = crud.search_cardio_records(db, request.question)
 
     print(f"\n--- DEBUG: PREGUNTA RECIBIDA: {request.question} ---")
     print(f"DEBUG: Cantidad de registros encontrados: {len(matched_records)}")
 
-    # 2. Construir el contexto para Ollama
     system_prompt = (
         "Eres un asistente médico experto en cardiología del sistema Cardio-Project. "
-        "TU TAREA es responder preguntas usando ÚNICAMENTE la información de la BASE DE DATOS que te proporciono. "
-        "Si los datos están ahí, úsalos para dar una respuesta detallada del paciente. "
-        "IMPORTANTE: Solo puedes responder preguntas relacionadas con la cardiología, la salud del corazón o el funcionamiento de este sistema. "
-        "Si el usuario pregunta algo ajeno a estos temas, responde cortésmente: 'Lo siento, solo puedo ayudarte con temas relacionados con el corazón o el sistema Cardio-Project'."
+        "TU TAREA es responder de forma inteligente basándote en el contexto proporcionado. "
+        "REGLAS CRÍTICAS:\n"
+        "1. Si el usuario hace una PREGUNTA GENERAL (ej. '¿Qué es la taquicardia?'), responde de forma educativa y profesional SIN mencionar datos de pacientes específicos de la base de datos, a menos que el usuario lo pida.\n"
+        "2. Si el usuario pregunta por DATOS REALES o REGISTROS (ej. '¿Qué pacientes tienen arritmia?'), utiliza la información de la BASE DE DATOS que te proporciono.\n"
+        "3. Solo puedes responder sobre cardiología o el sistema Cardio-Project. Para otros temas, di: 'Lo siento, solo puedo ayudarte con temas relacionados con el corazón o el sistema Cardio-Project'.\n"
+        "4. Sé conciso y preciso."
     )
 
-    context = "DATOS REALES DE LA BASE DE DATOS:\n"
+    context = ""
     if matched_records:
+        context += "DATOS DE LA BASE DE DATOS (Usar solo si el usuario pide datos reales o registros):\n"
         for r in matched_records:
-            record_str = f"- PACIENTE: {r.paciente}, RITMO: {r.ritmo_cardiaco} BPM, ARRITMIA: {r.tipo_arritmia}, DIAGNÓSTICO: {r.diagnostico}, SÍNTOMAS: {r.sintomas}, OBSERVACIONES: {r.observaciones}"
-            context += record_str + "\n"
-            print(f"DEBUG: Registro enviado a Ollama -> {record_str}")
-    else:
-        context += "NO SE ENCONTRARON REGISTROS EN LA BASE DE DATOS.\n"
-        print("DEBUG: No se enviaron registros médicos.")
-
-    context += f"\nPREGUNTA DEL USUARIO: {request.question}"
+            context += f"- PACIENTE: {r.paciente}, RITMO: {r.ritmo_cardiaco} BPM, ARRITMIA: {r.tipo_arritmia}, DIAGNÓSTICO: {r.diagnostico}, SÍNTOMAS: {r.sintomas}\n"
+    
+    context += f"\nPREGUNTA DEL USUARIO: {request.question}\n"
+    context += "\nResponde siguiendo las reglas del sistema."
 
     print("--- FIN DEBUG ---\n")
 
-    # 3. Llamar a Ollama
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
