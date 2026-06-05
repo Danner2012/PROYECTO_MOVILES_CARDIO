@@ -1,6 +1,6 @@
 // lib/features/pacientes/logic/pacientes_provider.dart
-
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../data/paciente_model.dart';
@@ -10,11 +10,10 @@ class PacientesProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _ultimoError;
 
-  List<PacienteModel> get pacientes  => _pacientes;
-  bool               get isLoading   => _isLoading;
-  String?            get ultimoError => _ultimoError;
+  List<PacienteModel> get pacientes    => _pacientes;
+  bool                get isLoading   => _isLoading;
+  String?             get ultimoError => _ultimoError;
 
-  // ✅ localhost — no 127.0.0.1 (Chrome trata las dos como orígenes distintos)
   final String baseUrl = 'http://localhost:8000/api/pacientes';
 
   Map<String, String> _headers(String token) => {
@@ -22,7 +21,7 @@ class PacientesProvider with ChangeNotifier {
     'Authorization': 'Bearer $token',
   };
 
-  // ── Listar pacientes del doctor logueado ──────────────────────────────────
+  // ── Listar pacientes ──────────────────────────────────────────────────────
   Future<void> cargarPacientes(String token) async {
     _isLoading = true;
     notifyListeners();
@@ -31,12 +30,9 @@ class PacientesProvider with ChangeNotifier {
         Uri.parse('$baseUrl/'),
         headers: _headers(token),
       );
-      debugPrint('cargarPacientes → ${response.statusCode}: ${response.body}');
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         _pacientes = data.map((j) => PacienteModel.fromJson(j)).toList();
-      } else {
-        debugPrint('cargarPacientes error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       debugPrint('cargarPacientes excepción: $e');
@@ -46,7 +42,7 @@ class PacientesProvider with ChangeNotifier {
     }
   }
 
-  // ── Registrar nuevo paciente ──────────────────────────────────────────────
+  // ── Registrar paciente (usa bytes para la foto) ───────────────────────────
   Future<bool> registrarPaciente({
     required String token,
     required String email,
@@ -54,33 +50,44 @@ class PacientesProvider with ChangeNotifier {
     required String sexo,
     required double peso,
     required double talla,
+    String  alergias         = 'Ninguna',
+    String  antecedentesBase = 'Ninguno',
+    Uint8List? fotoBytes,      // bytes de la imagen
+    String?   fotoNombre,      // nombre del archivo (ej: foto.jpg)
+    String?   fecha,           // no se envía al backend, se ignora
   }) async {
     try {
       final url = Uri.parse('$baseUrl/registrar/');
-      final body = json.encode({
-        'email':         email,
-        'edad':          edad,
-        'sexo':          sexo,
-        'peso_inicial':  peso,
-        'talla_inicial': talla,
-      });
+      final request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $token';
 
-      debugPrint('POST → $url');
-      debugPrint('Body → $body');
+      request.fields['email'] = email;
+      request.fields['edad'] = edad.toString();
+      request.fields['sexo'] = sexo;
+      request.fields['peso_inicial'] = peso.toString();
+      request.fields['talla_inicial'] = talla.toString();
+      request.fields['alergias'] = alergias;
+      request.fields['antecedentes_base'] = antecedentesBase;
 
-      final response = await http.post(url, headers: _headers(token), body: body);
+      if (fotoBytes != null && fotoBytes.isNotEmpty && fotoNombre != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'foto',
+          fotoBytes,
+          filename: fotoNombre,
+        ));
+      }
 
-      debugPrint('registrarPaciente → ${response.statusCode}: ${response.body}');
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 201) {
         await cargarPacientes(token);
         return true;
       }
 
-      // Extrae el mensaje de error del backend para mostrarlo en UI
       try {
         final decoded = json.decode(response.body);
-        _ultimoError  = decoded['error'] ?? 'Error desconocido';
+        _ultimoError = decoded['error'] ?? 'Error desconocido';
       } catch (_) {
         _ultimoError = 'Error ${response.statusCode}';
       }
@@ -94,22 +101,48 @@ class PacientesProvider with ChangeNotifier {
     }
   }
 
-  // ── Agregar control cardiológico ──────────────────────────────────────────
+  // ── Agregar control cardiológico (usa bytes para el adjunto) ──────────────
   Future<bool> agregarControlCardio({
-    required String              token,
-    required int                 pacienteId,
+    required String token,
+    required int pacienteId,
     required Map<String, dynamic> datosControl,
+    Uint8List? archivoBytes,
+    String?   archivoNombre,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/$pacienteId/controles/'),
-        headers: _headers(token),
-        body: json.encode(datosControl),
-      );
-      debugPrint('agregarControl → ${response.statusCode}: ${response.body}');
-      if (response.statusCode == 201) {
-        await cargarPacientes(token);
-        return true;
+      final url = Uri.parse('$baseUrl/$pacienteId/controles/');
+
+      if (archivoBytes != null && archivoBytes.isNotEmpty && archivoNombre != null) {
+        final request = http.MultipartRequest('POST', url);
+        request.headers['Authorization'] = 'Bearer $token';
+
+        datosControl.forEach((key, value) {
+          request.fields[key] = value.toString();
+        });
+
+        request.files.add(http.MultipartFile.fromBytes(
+          'archivo_adjunto',
+          archivoBytes,
+          filename: archivoNombre,
+        ));
+
+        final streamed = await request.send();
+        final response = await http.Response.fromStream(streamed);
+
+        if (response.statusCode == 201) {
+          await cargarPacientes(token);
+          return true;
+        }
+      } else {
+        final response = await http.post(
+          url,
+          headers: _headers(token),
+          body: json.encode(datosControl),
+        );
+        if (response.statusCode == 201) {
+          await cargarPacientes(token);
+          return true;
+        }
       }
       return false;
     } catch (e) {

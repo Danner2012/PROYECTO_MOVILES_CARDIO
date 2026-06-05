@@ -30,7 +30,6 @@ class SideMenu extends StatelessWidget {
               Navigator.pop(context);
             },
           ),
-          
           if (rol == 'doctor' || rol == 'superadmin' || rol == 'administrador')
             DrawerListTile(
               title: "Pacientes",
@@ -40,7 +39,6 @@ class SideMenu extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
-
           if (rol == 'administrador' || rol == 'superadmin')
             DrawerListTile(
               title: "Médicos",
@@ -50,7 +48,6 @@ class SideMenu extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
-          
           if (rol == 'administrador' || rol == 'superadmin')
             DrawerListTile(
               title: "IA Predicción",
@@ -60,7 +57,6 @@ class SideMenu extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
-            
           if (rol == 'administrador' || rol == 'superadmin')
             DrawerListTile(
               title: "Ollama",

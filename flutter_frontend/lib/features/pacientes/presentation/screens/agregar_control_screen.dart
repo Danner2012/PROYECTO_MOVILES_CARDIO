@@ -1,6 +1,9 @@
+// lib/features/pacientes/presentation/agregar_control_screen.dart
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../logic/pacientes_provider.dart';
 import '../../data/paciente_model.dart';
 // ignore_for_file: use_build_context_synchronously
@@ -26,7 +29,6 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
   late final Animation<double> _fadeAnim;
   late final Animation<Offset> _slideAnim;
 
-  // Controladores
   final _sistolicaCtrl = TextEditingController();
   final _diastolicaCtrl = TextEditingController();
   final _frecuenciaCtrl = TextEditingController();
@@ -35,6 +37,8 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
   final _diagnosticoCtrl = TextEditingController(text: 'Pendiente');
 
   bool _isLoading = false;
+  Uint8List? _archivoBytes;
+  String? _archivoNombre;
 
   @override
   void initState() {
@@ -58,6 +62,25 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
     super.dispose();
   }
 
+  Future<void> _seleccionarArchivo() async {
+    try {
+      final resultado = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        withData: true, // obtener bytes directamente (compatible con web)
+      );
+
+      if (resultado != null && resultado.files.isNotEmpty) {
+        setState(() {
+          _archivoBytes = resultado.files.single.bytes;
+          _archivoNombre = resultado.files.single.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error al seleccionar archivo: $e');
+    }
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -73,10 +96,13 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
     };
 
     final prov = Provider.of<PacientesProvider>(context, listen: false);
+    
     final ok = await prov.agregarControlCardio(
       token: widget.token,
       pacienteId: widget.paciente.id,
       datosControl: datos,
+      archivoBytes: _archivoBytes,
+      archivoNombre: _archivoNombre,
     );
 
     setState(() => _isLoading = false);
@@ -126,6 +152,8 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
 
   @override
   Widget build(BuildContext context) {
+    final tieneArchivo = _archivoBytes != null && _archivoNombre != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
@@ -160,7 +188,6 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header informativo
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -191,10 +218,7 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // ── Sección: Presión Arterial ──
                   _SectionLabel(label: 'PRESIÓN ARTERIAL', icon: Icons.favorite_outline),
                   const SizedBox(height: 12),
                   Row(
@@ -234,10 +258,7 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // ── Sección: Signos Vitales ──
                   _SectionLabel(label: 'SIGNOS VITALES', icon: Icons.sensors_outlined),
                   const SizedBox(height: 12),
                   Row(
@@ -277,10 +298,7 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // ── Sección: Síntomas ──
                   _SectionLabel(label: 'SÍNTOMAS', icon: Icons.notes_outlined),
                   const SizedBox(height: 12),
                   _DarkMultilineField(
@@ -293,10 +311,7 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 20),
-
-                  // ── Sección: Diagnóstico ECG ──
                   _SectionLabel(label: 'DIAGNÓSTICO ECG', icon: Icons.monitor_heart_outlined),
                   const SizedBox(height: 12),
                   _DarkField(
@@ -308,10 +323,67 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
                       return null;
                     },
                   ),
-
+                  const SizedBox(height: 24),
+                  _SectionLabel(label: 'ESTUDIO ADJUNTO (REPORTE / ECG)', icon: Icons.attach_file_outlined),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: _isLoading ? null : _seleccionarArchivo,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF161B22),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: tieneArchivo ? Colors.tealAccent : Colors.white12,
+                          width: tieneArchivo ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            tieneArchivo ? Icons.description_outlined : Icons.cloud_upload_outlined,
+                            color: tieneArchivo ? Colors.tealAccent : Colors.white38,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tieneArchivo ? _archivoNombre! : 'Adjuntar documento o imagen de ECG',
+                                  style: TextStyle(
+                                    color: tieneArchivo ? Colors.white : Colors.white54,
+                                    fontSize: 13,
+                                    fontWeight: tieneArchivo ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  tieneArchivo ? 'Haga clic para cambiar de archivo' : 'Formatos admitidos: PDF, JPG, JPEG, PNG',
+                                  style: const TextStyle(color: Colors.white24, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (tieneArchivo)
+                            IconButton(
+                              icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  _archivoBytes = null;
+                                  _archivoNombre = null;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 36),
-
-                  // Botón guardar
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -363,13 +435,11 @@ class _AgregarControlScreenState extends State<AgregarControlScreen>
   }
 }
 
-// ─── Widgets helpers ──────────────────────────────────────────────────────────
-
+// ─── Widgets helpers (sin cambios) ─────────────────────────────────────────
 class _SectionLabel extends StatelessWidget {
   final String label;
   final IconData icon;
   const _SectionLabel({required this.label, required this.icon});
-
   @override
   Widget build(BuildContext context) {
     return Row(

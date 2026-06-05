@@ -5,7 +5,7 @@ import 'package:flutter_frontend/features/dashboard/presentation/screens/dashboa
 import 'package:flutter_frontend/features/dashboard/presentation/screens/doctors/doctors_screen.dart';
 import 'package:flutter_frontend/features/dashboard/presentation/screens/ia_prediction/ia_prediction_screen.dart';
 import 'package:flutter_frontend/features/ollama/presentation/screens/ollama/ollama_screen.dart';
-import 'package:flutter_frontend/features/pacientes/presentation/screens/pacientes_screen.dart'; // 📌 Importación añadida
+import 'package:flutter_frontend/features/pacientes/presentation/screens/pacientes_screen.dart'; 
 import 'package:provider/provider.dart';
 
 import 'components/side_menu.dart';
@@ -18,7 +18,7 @@ class MainScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      key: menuController.scaffoldKey,
+      // Se elimina la clave global para evitar el error Duplicate GlobalKey
       drawer: !isDesktop ? const SideMenu() : null,
       body: SafeArea(
         child: Row(
