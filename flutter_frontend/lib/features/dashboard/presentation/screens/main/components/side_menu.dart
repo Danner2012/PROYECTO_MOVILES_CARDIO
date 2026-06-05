@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_frontend/features/auth/logic/auth_provider.dart';
 import 'package:flutter_frontend/features/dashboard/logic/menu_app_controller.dart';
+import 'package:flutter_frontend/features/dashboard/presentation/responsive.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
@@ -27,7 +28,9 @@ class SideMenu extends StatelessWidget {
             svgSrc: "assets/icons/menu_dashboard.svg",
             press: () {
               menuController.setSelectedPage("dashboard");
-              Navigator.pop(context);
+              if (!Responsive.isDesktop(context)) {
+                Navigator.pop(context);
+              }
             },
           ),
           
@@ -37,7 +40,9 @@ class SideMenu extends StatelessWidget {
               svgSrc: "assets/icons/menu_profile.svg",
               press: () {
                 menuController.setSelectedPage("pacientes");
-                Navigator.pop(context);
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
               },
             ),
 
@@ -47,7 +52,9 @@ class SideMenu extends StatelessWidget {
               svgSrc: "assets/icons/menu_doc.svg",
               press: () {
                 menuController.setSelectedPage("doctors");
-                Navigator.pop(context);
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
               },
             ),
           
@@ -57,7 +64,9 @@ class SideMenu extends StatelessWidget {
               svgSrc: "assets/icons/menu_task.svg",
               press: () {
                 menuController.setSelectedPage("ia_prediction");
-                Navigator.pop(context);
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
               },
             ),
             
@@ -67,7 +76,9 @@ class SideMenu extends StatelessWidget {
               svgSrc: "assets/icons/menu_notification.svg",
               press: () {
                 menuController.setSelectedPage("ollama");
-                Navigator.pop(context);
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
               },
             ),
         ],
