@@ -6,8 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from .models import Paciente
+import asyncio
+from .models import Paciente, ControlCardiologico
 from .serializers import PacienteSerializer, ControlCardiologicoSerializer
+from infrastructure.ollama_client import get_cardio_explanation
 
 User = get_user_model()
 
@@ -21,6 +23,56 @@ def es_doctor(usuario):
         return str(usuario.rol).lower() == 'doctor'
     except Exception:
         return False
+
+
+def es_paciente(usuario):
+    try:
+        return str(usuario.rol).lower() == 'paciente'
+    except Exception:
+        return False
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_mis_controles(request):
+    if not es_paciente(request.user):
+        return Response(
+            {"error": "Este endpoint es solo para pacientes."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+    except Paciente.DoesNotExist:
+        return Response(
+            {"error": "No se encontró un perfil de paciente para este usuario."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    controles = ControlCardiologico.objects.filter(paciente=paciente).order_by('-fecha')
+    serializer = ControlCardiologicoSerializer(controles, many=True)
+    data = serializer.data
+
+    # Enriquecer con IA de forma asíncrona (opcionalmente podríamos hacerlo uno por uno o en batch)
+    # Por simplicidad y para no bloquear demasiado, lo haremos para todos los controles
+    # En un entorno real, esto podría cachearse.
+    
+    async def enriquecer_controles(controles_data):
+        tasks = []
+        for c in controles_data:
+            sintomas = c.get('sintomas', 'Ninguno')
+            diagnostico = c.get('diagnostico_ecg', 'Pendiente')
+            tasks.append(get_cardio_explanation(sintomas, diagnostico))
+        
+        explicaciones = await asyncio.gather(*tasks)
+        for i, c in enumerate(controles_data):
+            c['explicacion_ia'] = explicaciones[i]
+
+    # Ejecutar la parte asíncrona
+    asyncio.run(enriquecer_controles(data))
+
+    return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

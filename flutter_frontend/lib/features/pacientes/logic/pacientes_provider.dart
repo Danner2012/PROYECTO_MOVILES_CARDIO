@@ -7,10 +7,12 @@ import '../data/paciente_model.dart';
 
 class PacientesProvider with ChangeNotifier {
   List<PacienteModel> _pacientes = [];
+  List<dynamic> _misControles = [];
   bool _isLoading = false;
   String? _ultimoError;
 
   List<PacienteModel> get pacientes  => _pacientes;
+  List<dynamic>       get misControles => _misControles;
   bool               get isLoading   => _isLoading;
   String?            get ultimoError => _ultimoError;
 
@@ -115,6 +117,31 @@ class PacientesProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('agregarControlCardio excepción: $e');
       return false;
+    }
+  }
+
+  // ── Obtener controles propios (para el rol paciente) ──────────────────────
+  Future<void> fetchMisControles(String token) async {
+    _isLoading = true;
+    _ultimoError = null;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/mis-controles/'),
+        headers: _headers(token),
+      );
+      debugPrint('fetchMisControles → ${response.statusCode}');
+      if (response.statusCode == 200) {
+        _misControles = json.decode(response.body);
+      } else {
+        _ultimoError = 'No se pudieron cargar tus controles.';
+      }
+    } catch (e) {
+      debugPrint('fetchMisControles excepción: $e');
+      _ultimoError = 'Error de conexión';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

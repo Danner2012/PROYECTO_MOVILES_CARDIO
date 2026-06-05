@@ -1,0 +1,18 @@
+# Entornos virtuales de Python
+backend/venv/
+venv/
+.venv/
+env/
+
+# Archivos temporales de ejecución (Python y carpetas como __pycache__)
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Variables de entorno / Credenciales (Por seguridad)
+.env
+.env.*
+
+# Carpetas de librerías de Frontend (Por si acaso)
+node_modules/

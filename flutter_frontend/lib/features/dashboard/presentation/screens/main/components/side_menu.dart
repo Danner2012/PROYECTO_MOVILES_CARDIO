@@ -41,6 +41,16 @@ class SideMenu extends StatelessWidget {
               },
             ),
 
+          if (rol == 'paciente')
+            DrawerListTile(
+              title: "Mis Controles",
+              svgSrc: "assets/icons/menu_tran.svg",
+              press: () {
+                menuController.setSelectedPage("mis_controles");
+                Navigator.pop(context);
+              },
+            ),
+
           if (rol == 'administrador' || rol == 'superadmin')
             DrawerListTile(
               title: "Médicos",
