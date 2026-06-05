@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../dashboard/presentation/constants.dart';
 import '../../logic/pacientes_provider.dart';
 
 class RegistrarPacienteScreen extends StatefulWidget {
@@ -13,10 +14,12 @@ class RegistrarPacienteScreen extends StatefulWidget {
   State<RegistrarPacienteScreen> createState() => _RegistrarPacienteScreenState();
 }
 
-class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
-    with SingleTickerProviderStateMixin {
+class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
+  
+  // Controlador capturado desde el Autocomplete
+  TextEditingController? _emailTextCtrl;
+  
   final _edadCtrl = TextEditingController();
   final _pesoCtrl = TextEditingController();
   final _tallaCtrl = TextEditingController();
@@ -27,44 +30,49 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  static const _teal = Color(0xFF00BFA5);
-  static const _bg = Color(0xFF0D1117);
-  static const _border = Color(0xFF30363D);
+  // TODO: Esta lista debería ser cargada desde el Backend/Provider con los usuarios disponibles
+  final List<String> _correosDisponibles = [
+    'paciente@cardio.com',
+    'juan.perez@cardio.com',
+    'maria.lopez@cardio.com',
+    'carlos.m@cardio.com',
+    'ana.gomez@cardio.com'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
     _animCtrl.forward();
   }
 
   @override
   void dispose() {
     _animCtrl.dispose();
-    _emailCtrl.dispose();
     _edadCtrl.dispose();
     _pesoCtrl.dispose();
     _tallaCtrl.dispose();
+    // No hacemos dispose de _emailTextCtrl porque el widget Autocomplete lo maneja internamente
     super.dispose();
   }
 
   Future<void> _guardarPaciente() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Verificamos que se haya escrito o seleccionado un correo
+    if (_emailTextCtrl == null || _emailTextCtrl!.text.trim().isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debes seleccionar o escribir un correo válido')));
+       return;
+    }
 
     setState(() => _isSaving = true);
 
-    final exito = await Provider.of<PacientesProvider>(context, listen: false)
-        .registrarPaciente(
+    final exito = await Provider.of<PacientesProvider>(context, listen: false).registrarPaciente(
       token: widget.token,
-      email: _emailCtrl.text.trim(),
+      email: _emailTextCtrl!.text.trim(),
       edad: int.parse(_edadCtrl.text),
       sexo: _sexoSeleccionado,
       peso: double.parse(_pesoCtrl.text),
@@ -72,44 +80,36 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
     );
 
     setState(() => _isSaving = false);
-
     if (!mounted) return;
 
     if (exito) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: _teal,
+          backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           content: const Row(
             children: [
               Icon(Icons.check_circle_outline, color: Colors.white),
               SizedBox(width: 10),
-              Text('Paciente vinculado exitosamente.',
-                  style: TextStyle(color: Colors.white)),
+              Text('Paciente vinculado exitosamente.', style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
       );
       Navigator.pop(context);
     } else {
-      final errorMsg = Provider.of<PacientesProvider>(context, listen: false).ultimoError
-          ?? 'Verifica que el email exista y no esté duplicado.';
+      final errorMsg = Provider.of<PacientesProvider>(context, listen: false).ultimoError ?? 'Verifica que el email exista y no esté duplicado.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFCF6679),
+          backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           content: Row(
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  errorMsg,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
+              Expanded(child: Text(errorMsg, style: const TextStyle(color: Colors.white))),
             ],
           ),
         ),
@@ -120,40 +120,25 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: secondaryColor,
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Nuevo Paciente',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _border),
-        ),
+        title: const Text('Nuevo Paciente', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
       ),
       body: _isSaving
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(color: _teal, strokeWidth: 2.5),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Vinculando paciente...',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
-                  ),
+                  const CircularProgressIndicator(color: primaryColor, strokeWidth: 3),
+                  const SizedBox(height: defaultPadding),
+                  Text('Vinculando paciente...', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
                 ],
               ),
             )
@@ -162,81 +147,134 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
               child: SlideTransition(
                 position: _slideAnim,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                  padding: const EdgeInsets.all(defaultPadding),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Header card ──────────────────────────────────
+                        // Header Card
                         Container(
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.all(defaultPadding),
                           decoration: BoxDecoration(
-                            color: _teal.withValues(alpha: 0.08),
+                            color: secondaryColor,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: _teal.withValues(alpha: 0.25)),
+                            border: Border.all(color: primaryColor.withOpacity(0.15)),
                           ),
                           child: Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: _teal.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.person_add_alt_1_rounded,
-                                    color: _teal, size: 22),
+                                decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.person_add_alt_1_rounded, color: primaryColor, size: 28),
                               ),
                               const SizedBox(width: 14),
                               const Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Vincular expediente',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    SizedBox(height: 3),
-                                    Text(
-                                      'El usuario debe estar registrado en el sistema.',
-                                      style: TextStyle(color: Colors.white54, fontSize: 12),
-                                    ),
+                                    Text('Vincular expediente', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                    SizedBox(height: 4),
+                                    Text('El usuario debe estar registrado en el sistema.', style: TextStyle(color: Colors.white54, fontSize: 12)),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(height: defaultPadding * 1.5),
 
-                        const SizedBox(height: 28),
-
-                        // ── Sección: Identificación ───────────────────────
-                        _SectionLabel(label: 'IDENTIFICACIÓN'),
-                        const SizedBox(height: 12),
-
-                        _DarkField(
-                          controller: _emailCtrl,
-                          label: 'Email del usuario',
-                          hint: 'correo@ejemplo.com',
-                          icon: Icons.alternate_email_rounded,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Campo requerido';
-                            if (!v.contains('@')) return 'Email inválido';
-                            return null;
-                          },
+                        const _SectionLabel(label: 'IDENTIFICACIÓN'),
+                        const SizedBox(height: defaultPadding),
+                        
+                        // ─── CAMPO CON AUTOCOMPLETADO Y DESPLEGABLE ───
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Autocomplete<String>(
+                              optionsBuilder: (TextEditingValue textEditingValue) {
+                                if (textEditingValue.text.isEmpty) {
+                                  return _correosDisponibles;
+                                }
+                                return _correosDisponibles.where((String option) {
+                                  return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                                });
+                              },
+                              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                                // Guardamos la referencia del controlador para poder sacar el texto al guardar
+                                _emailTextCtrl = textEditingController; 
+                                
+                                return _DarkField(
+                                  controller: textEditingController,
+                                  focusNode: focusNode, // Pasamos el foco
+                                  label: 'Email del usuario',
+                                  hint: 'Buscar o escribir correo...',
+                                  icon: Icons.search_rounded,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Campo requerido';
+                                    if (!v.contains('@')) return 'Email inválido';
+                                    return null;
+                                  },
+                                );
+                              },
+                              optionsViewBuilder: (context, onSelected, options) {
+                                return Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: Container(
+                                      width: constraints.maxWidth, // Mismo ancho que el campo de texto
+                                      margin: const EdgeInsets.only(top: 5),
+                                      clipBehavior: Clip.hardEdge,
+                                      decoration: BoxDecoration(
+                                        color: secondaryColor,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: primaryColor.withOpacity(0.5)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.3),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 5),
+                                          )
+                                        ]
+                                      ),
+                                      child: ListView.builder(
+                                        padding: EdgeInsets.zero,
+                                        shrinkWrap: true,
+                                        itemCount: options.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          final String option = options.elementAt(index);
+                                          return InkWell(
+                                            onTap: () => onSelected(option),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                              decoration: BoxDecoration(
+                                                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05)))
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.person_outline, color: primaryColor, size: 18),
+                                                  const SizedBox(width: 10),
+                                                  Text(option, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }
                         ),
+                        // ──────────────────────────────────────────────
 
-                        const SizedBox(height: 28),
+                        const SizedBox(height: defaultPadding * 1.5),
 
-                        // ── Sección: Datos clínicos ───────────────────────
-                        _SectionLabel(label: 'DATOS CLÍNICOS'),
-                        const SizedBox(height: 12),
-
+                        const _SectionLabel(label: 'DATOS CLÍNICOS'),
+                        const SizedBox(height: defaultPadding),
                         Row(
                           children: [
                             Expanded(
@@ -250,7 +288,7 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
                                 validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: defaultPadding),
                             Expanded(
                               child: _SexoDropdown(
                                 value: _sexoSeleccionado,
@@ -259,9 +297,7 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
                             ),
                           ],
                         ),
-
-                        const SizedBox(height: 16),
-
+                        const SizedBox(height: defaultPadding),
                         Row(
                           children: [
                             Expanded(
@@ -271,14 +307,10 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
                                 hint: 'kg',
                                 icon: Icons.monitor_weight_outlined,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Requerido';
-                                  if (double.tryParse(v) == null) return 'Número inválido';
-                                  return null;
-                                },
+                                validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: defaultPadding),
                             Expanded(
                               child: _DarkField(
                                 controller: _tallaCtrl,
@@ -286,50 +318,24 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
                                 hint: 'm',
                                 icon: Icons.height_rounded,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Requerido';
-                                  final d = double.tryParse(v);
-                                  if (d == null) return 'Número inválido';
-                                  if (d > 3.0) return 'Usa metros (ej: 1.70)';
-                                  return null;
-                                },
+                                validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: defaultPadding * 2),
 
-                        const SizedBox(height: 40),
-
-                        // ── Botón ─────────────────────────────────────────
                         SizedBox(
                           width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
+                          height: 55,
+                          child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _teal,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              backgroundColor: primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             onPressed: _guardarPaciente,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.link_rounded, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Registrar Expediente',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            icon: const Icon(Icons.link_rounded, color: Colors.white),
+                            label: const Text('Registrar Expediente', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -342,89 +348,44 @@ class _RegistrarPacienteScreenState extends State<RegistrarPacienteScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Widgets auxiliares
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Helpers
 class _SectionLabel extends StatelessWidget {
   final String label;
   const _SectionLabel({required this.label});
-
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        color: Color(0xFF00BFA5),
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-      ),
-    );
+    return Text(label, style: const TextStyle(color: primaryColor, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2));
   }
 }
 
 class _DarkField extends StatelessWidget {
   final TextEditingController controller;
-  final String label;
-  final String hint;
+  final FocusNode? focusNode; // <--- Nuevo parámetro añadido
+  final String label, hint;
   final IconData icon;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
   final List<TextInputFormatter>? inputFormatters;
 
-  const _DarkField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.icon,
-    required this.keyboardType,
-    this.validator,
-    this.inputFormatters,
-  });
-
-  static const _border = Color(0xFF30363D);
-  static const _teal = Color(0xFF00BFA5);
+  const _DarkField({required this.controller, this.focusNode, required this.label, required this.hint, required this.icon, required this.keyboardType, this.validator, this.inputFormatters});
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode, // <--- Conectado aquí
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),
-      cursorColor: _teal,
       decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
+        labelText: label, hintText: hint,
         prefixIcon: Icon(icon, color: Colors.white38, size: 18),
         labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-        filled: true,
-        fillColor: const Color(0xFF161B22),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _teal, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFCF6679)),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFCF6679), width: 1.5),
-        ),
-        errorStyle: const TextStyle(color: Color(0xFFCF6679), fontSize: 11),
+        filled: true, fillColor: secondaryColor,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.redAccent)),
       ),
     );
   }
@@ -433,43 +394,24 @@ class _DarkField extends StatelessWidget {
 class _SexoDropdown extends StatelessWidget {
   final String value;
   final ValueChanged<String?> onChanged;
-
   const _SexoDropdown({required this.value, required this.onChanged});
-
-  static const _border = Color(0xFF30363D);
-  static const _teal = Color(0xFF00BFA5);
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       onChanged: onChanged,
-      dropdownColor: const Color(0xFF1C2128),
-      icon: const Icon(Icons.expand_more_rounded, color: Colors.white38, size: 20),
+      dropdownColor: bgColor,
+      icon: const Icon(Icons.expand_more_rounded, color: Colors.white38),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
-        labelText: 'Sexo',
-        prefixIcon: const Icon(Icons.wc_rounded, color: Colors.white38, size: 18),
+        labelText: 'Sexo', prefixIcon: const Icon(Icons.wc_rounded, color: Colors.white38, size: 18),
         labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        filled: true,
-        fillColor: const Color(0xFF161B22),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _teal, width: 1.5),
-        ),
+        filled: true, fillColor: secondaryColor,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
       ),
-      items: ['Masculino', 'Femenino', 'Otro'].map((s) {
-        return DropdownMenuItem(value: s, child: Text(s));
-      }).toList(),
+      items: ['Masculino', 'Femenino', 'Otro'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
     );
   }
 }
