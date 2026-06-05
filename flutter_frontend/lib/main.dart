@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_frontend/features/dashboard/logic/menu_app_controller.dart';
+
+// --- Tus Providers ---
 import 'features/auth/logic/auth_provider.dart';
+import 'features/dashboard/logic/menu_app_controller.dart';
+import 'features/ia_prediction/logic/prediction_provider.dart';
+import 'features/dashboard/logic/doctor_provider.dart';
+import 'features/ollama/logic/ollama_provider.dart';
+import 'features/pacientes/logic/pacientes_provider.dart'; // ¡Añadido!
+
+// --- Tus Pantallas ---
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/dashboard/presentation/screens/main/main_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
-import 'package:flutter_frontend/features/ia_prediction/logic/prediction_provider.dart';
-import 'package:flutter_frontend/features/dashboard/logic/doctor_provider.dart';
-import 'package:flutter_frontend/features/ollama/logic/ollama_provider.dart';
+
+// --- Otros ---
 import 'core/app_theme.dart';
 
 void main() {
@@ -19,6 +26,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => IaPredictionProvider()),
         ChangeNotifierProvider(create: (_) => DoctorProvider()),
         ChangeNotifierProvider(create: (_) => OllamaProvider()),
+        ChangeNotifierProvider(create: (_) => PacientesProvider()), // ¡Provider integrado!
       ],
       child: const MyApp(),
     ),

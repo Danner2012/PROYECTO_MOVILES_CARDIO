@@ -1,15 +1,17 @@
+// lib/features/dashboard/logic/menu_app_controller.dart
 import 'package:flutter/material.dart';
 
 class MenuAppController extends ChangeNotifier {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _selectedPage = "dashboard";
 
-  GlobalKey<ScaffoldState> get scaffoldKey => _scaffoldKey;
   String get selectedPage => _selectedPage;
 
-  void controlMenu() {
-    if (!_scaffoldKey.currentState!.isDrawerOpen) {
-      _scaffoldKey.currentState!.openDrawer();
+  void controlMenu(BuildContext context) {
+    final scaffold = Scaffold.of(context);
+    if (scaffold.isDrawerOpen) {
+      scaffold.closeDrawer();
+    } else {
+      scaffold.openDrawer();
     }
   }
 

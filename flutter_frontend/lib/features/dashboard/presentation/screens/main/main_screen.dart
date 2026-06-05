@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_frontend/features/dashboard/logic/menu_app_controller.dart';
 import 'package:flutter_frontend/features/dashboard/presentation/responsive.dart';
@@ -7,6 +5,7 @@ import 'package:flutter_frontend/features/dashboard/presentation/screens/dashboa
 import 'package:flutter_frontend/features/dashboard/presentation/screens/doctors/doctors_screen.dart';
 import 'package:flutter_frontend/features/dashboard/presentation/screens/ia_prediction/ia_prediction_screen.dart';
 import 'package:flutter_frontend/features/ollama/presentation/screens/ollama/ollama_screen.dart';
+import 'package:flutter_frontend/features/pacientes/presentation/screens/pacientes_screen.dart'; 
 import 'package:provider/provider.dart';
 
 import 'components/side_menu.dart';
@@ -19,9 +18,7 @@ class MainScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      key: menuController.scaffoldKey,
-      // Solo mostramos el drawer si NO es escritorio, 
-      // para evitar duplicar el SideMenu (y sus llaves) en el árbol de widgets.
+      // Se elimina la clave global para evitar el error Duplicate GlobalKey
       drawer: !isDesktop ? const SideMenu() : null,
       body: SafeArea(
         child: Row(
@@ -51,6 +48,8 @@ class MainScreen extends StatelessWidget {
         return IaPredictionScreen();
       case "ollama":
         return OllamaScreen();
+      case "pacientes": 
+        return const PacientesScreen();
       default:
         return DashboardScreen();
     }
