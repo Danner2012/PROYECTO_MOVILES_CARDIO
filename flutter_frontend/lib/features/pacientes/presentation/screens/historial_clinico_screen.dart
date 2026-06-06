@@ -232,19 +232,34 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF161B22),
-          title: Text(historial == null ? 'Nuevo Historial' : 'Editar Historial', style: const TextStyle(color: Colors.white)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildField(motivoCtrl, 'Motivo de Consulta', Icons.message),
-                _buildField(antCardioCtrl, 'Antecedentes Cardíacos', Icons.favorite),
-                _buildField(antFamCtrl, 'Antecedentes Familiares', Icons.people),
-                _buildField(enfPrevCtrl, 'Enfermedades Previas', Icons.medical_services),
-                _buildField(alergiasCtrl, 'Alergias', Icons.warning),
-                _buildField(estadoCtrl, 'Estado Actual', Icons.info),
-                _buildField(obsCtrl, 'Observaciones Médicas', Icons.notes, maxLines: 3),
-              ],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text(historial == null ? 'Nuevo Registro de Historial' : 'Editar Historial Clínico', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('DATOS DE LA CONSULTA', style: TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                  const SizedBox(height: 12),
+                  _buildField(motivoCtrl, 'Motivo de Consulta', Icons.message, hint: 'Ej: Dolor torácico persistente'),
+                  _buildField(estadoCtrl, 'Estado Actual del Paciente', Icons.info, hint: 'Estable, Crítico, Reservado...'),
+                  
+                  const Divider(color: Colors.white10, height: 30),
+                  const Text('ANTECEDENTES Y CLÍNICA', style: TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                  const SizedBox(height: 12),
+                  _buildField(antCardioCtrl, 'Antecedentes Cardíacos', Icons.favorite, maxLines: 2, hint: 'Cirugías previas, arritmias conocidas...'),
+                  _buildField(antFamCtrl, 'Antecedentes Familiares', Icons.people, maxLines: 2, hint: 'Hipertensión en padres, etc.'),
+                  _buildField(enfPrevCtrl, 'Enfermedades Previas', Icons.medical_services, maxLines: 2),
+                  _buildField(alergiasCtrl, 'Alergias Conocidas', Icons.warning),
+                  
+                  const Divider(color: Colors.white10, height: 30),
+                  const Text('NOTAS MÉDICAS', style: TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                  const SizedBox(height: 12),
+                  _buildField(obsCtrl, 'Observaciones Detalladas', Icons.notes, maxLines: 5, hint: 'Anotaciones adicionales sobre el examen físico...'),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -253,7 +268,11 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
               child: const Text('Cancelar', style: TextStyle(color: Colors.white54))
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _teal),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _teal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
               onPressed: _isSaving ? null : () async {
                 if (motivoCtrl.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El motivo de consulta es obligatorio')));
@@ -318,19 +337,29 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
     );
   }
 
-  Widget _buildField(TextEditingController ctrl, String label, IconData icon, {int maxLines = 1}) {
+  Widget _buildField(TextEditingController ctrl, String label, IconData icon, {int maxLines = 1, String? hint}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 15),
       child: TextField(
         controller: ctrl,
         maxLines: maxLines,
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: _teal),
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+          labelStyle: const TextStyle(color: _teal, fontSize: 13),
           prefixIcon: Icon(icon, color: Colors.white24, size: 20),
-          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _teal)),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.03),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Colors.white10),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _teal),
+          ),
         ),
       ),
     );
@@ -353,13 +382,14 @@ class _HistorialItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fecha = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(historial.fechaRegistro));
+    const teal = Color(0xFF00BFA5);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1117),
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white10),
       ),
       child: Column(
@@ -368,16 +398,23 @@ class _HistorialItem extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(fecha, style: const TextStyle(color: Color(0xFF00BFA5), fontWeight: FontWeight.bold, fontSize: 13)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: teal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(fecha, style: const TextStyle(color: teal, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white38, size: 18),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.white38, size: 20),
                     tooltip: 'Editar',
                     onPressed: () => onEdit(historial),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.block, color: Colors.redAccent, size: 18),
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
                     tooltip: 'Desactivar',
                     onPressed: () => _confirmarDesactivar(context),
                   ),
@@ -385,31 +422,68 @@ class _HistorialItem extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          _textRow('Motivo', historial.motivoConsulta),
-          if (historial.antecedentesCardiacos?.isNotEmpty ?? false) _textRow('Ant. Cardiacos', historial.antecedentesCardiacos!),
-          if (historial.alergias?.isNotEmpty ?? false) _textRow('Alergias', historial.alergias!),
-          _textRow('Estado', historial.estadoActual, color: _getColorEstado(historial.estadoActual)),
-          if (historial.observacionesMedicas?.isNotEmpty ?? false)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(historial.observacionesMedicas!, style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic)),
+          const SizedBox(height: 12),
+          Text(
+            historial.motivoConsulta,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          
+          _infoSection('Antecedentes Cardíacos', historial.antecedentesCardiacos, teal),
+          _infoSection('Antecedentes Familiares', historial.antecedentesFamiliares, teal),
+          _infoSection('Enfermedades Previas', historial.enfermedadesPrevias, teal),
+          _infoSection('Alergias', historial.alergias, teal),
+          
+          const Divider(color: Colors.white10, height: 24),
+          
+          Row(
+            children: [
+              const Icon(Icons.info_outline, size: 14, color: Colors.white38),
+              const SizedBox(width: 4),
+              const Text('Estado: ', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              Text(historial.estadoActual, style: TextStyle(color: _getColorEstado(historial.estadoActual), fontSize: 12, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          
+          if (historial.observacionesMedicas?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Observaciones:', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    historial.observacionesMedicas!,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                  ),
+                ],
+              ),
             ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _textRow(String label, String value, {Color color = Colors.white54}) {
+  Widget _infoSection(String label, String? value, Color teal) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(text: '$label: ', style: const TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold)),
-            TextSpan(text: value, style: TextStyle(color: color, fontSize: 12)),
-          ],
-        ),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(), style: TextStyle(color: teal, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        ],
       ),
     );
   }
