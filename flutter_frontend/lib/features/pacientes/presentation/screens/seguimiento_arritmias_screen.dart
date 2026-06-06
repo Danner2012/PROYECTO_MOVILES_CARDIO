@@ -210,23 +210,32 @@ class _ListaArritmiasSheetState extends State<_ListaArritmiasSheet> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         title: Text(arritmia == null ? 'Nueva Arritmia' : 'Editar Arritmia', style: const TextStyle(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildField(tipoCtrl, 'Tipo de Arritmia (Ej: Bradicardia)', Icons.heart_broken),
-              _buildField(riesgoCtrl, 'Nivel de Riesgo', Icons.warning_amber),
-              _buildField(estadoCtrl, 'Estado', Icons.info_outline),
-              _buildField(obsCtrl, 'Observaciones', Icons.notes, maxLines: 3),
-            ],
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildField(tipoCtrl, 'Tipo de Arritmia', Icons.heart_broken, hint: 'Ej: Bradicardia Sinusal'),
+                _buildField(riesgoCtrl, 'Nivel de Riesgo', Icons.warning_amber, hint: 'Bajo, Medio, Alto, Crítico'),
+                _buildField(estadoCtrl, 'Estado', Icons.info_outline, hint: 'Activa, En tratamiento, Controlada'),
+                _buildField(obsCtrl, 'Observaciones Médicas', Icons.notes, maxLines: 3, hint: 'Detalles adicionales...'),
+              ],
+            ),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _teal),
+            style: ElevatedButton.styleFrom(backgroundColor: _teal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             onPressed: () async {
+              if (tipoCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El tipo de arritmia es obligatorio')));
+                return;
+              }
+
               final datos = {
                 'tipo_arritmia': tipoCtrl.text,
                 'fecha_deteccion': DateTime.now().toIso8601String().split('T')[0],
@@ -252,7 +261,9 @@ class _ListaArritmiasSheetState extends State<_ListaArritmiasSheet> {
 
               if (ok && context.mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro actualizado')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro guardado correctamente')));
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al guardar registro'), backgroundColor: Colors.redAccent));
               }
             },
             child: const Text('Guardar', style: TextStyle(color: Colors.white)),
@@ -262,19 +273,23 @@ class _ListaArritmiasSheetState extends State<_ListaArritmiasSheet> {
     );
   }
 
-  Widget _buildField(TextEditingController ctrl, String label, IconData icon, {int maxLines = 1}) {
+  Widget _buildField(TextEditingController ctrl, String label, IconData icon, {int maxLines = 1, String? hint}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 15),
       child: TextField(
         controller: ctrl,
         maxLines: maxLines,
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: _teal),
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+          labelStyle: const TextStyle(color: _teal, fontSize: 13),
           prefixIcon: Icon(icon, color: Colors.white24, size: 20),
-          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _teal)),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.03),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _teal)),
         ),
       ),
     );
@@ -376,15 +391,23 @@ class _SeguimientosArritmiaDialog extends StatefulWidget {
 
 class _SeguimientosArritmiaDialogState extends State<_SeguimientosArritmiaDialog> {
   static const _teal = Color(0xFF00BFA5);
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF0D1117),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-      title: Text('Seguimiento: ${widget.arritmia.tipoArritmia}', style: const TextStyle(color: Colors.white)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text('Seguimiento: ${widget.arritmia.tipoArritmia}', style: const TextStyle(color: Colors.white, fontSize: 16))),
+          IconButton(icon: const Icon(Icons.close, color: Colors.white38), onPressed: () => Navigator.pop(context)),
+        ],
+      ),
       content: SizedBox(
-        width: double.maxFinite,
+        width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -397,37 +420,68 @@ class _SeguimientosArritmiaDialogState extends State<_SeguimientosArritmiaDialog
                         final s = widget.arritmia.seguimientos[i];
                         return Card(
                           color: const Color(0xFF161B22),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           child: ListTile(
                             dense: true,
-                            title: Text('${s.fechaControl} - ${s.frecuenciaCardiaca} BPM', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Riesgo: ${s.nivelRiesgo}\nEstado: ${s.estado}', style: const TextStyle(color: Colors.white54)),
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: Colors.redAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
+                              child: const Icon(Icons.favorite, color: Colors.redAccent, size: 16),
+                            ),
+                            title: Text('${s.frecuenciaCardiaca} BPM', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            subtitle: Text('Fecha: ${s.fechaControl}\nRiesgo: ${s.nivelRiesgo} | Estado: ${s.estado}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.white24, size: 16),
-                              onPressed: () async {
-                                final authProv = Provider.of<AuthProvider>(context, listen: false);
-                                final pacProv = Provider.of<PacientesProvider>(context, listen: false);
-                                await pacProv.eliminarSeguimientoArritmia(token: authProv.token!, seguimientoId: s.id);
-                                if (mounted) Navigator.pop(context);
-                              },
+                              icon: const Icon(Icons.delete_outline, color: Colors.white24, size: 18),
+                              onPressed: () => _confirmarEliminarSeguimiento(s.id),
                             ),
                           ),
                         );
                       },
                     ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: () => _nuevoSeguimiento(context),
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Nuevo Control BPM'),
-              style: ElevatedButton.styleFrom(backgroundColor: _teal),
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : () => _nuevoSeguimiento(context),
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Nuevo Control de Seguimiento'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _teal,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
-      ],
+    );
+  }
+
+  void _confirmarEliminarSeguimiento(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        title: const Text('¿Eliminar control?', style: TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () async {
+              final authProv = Provider.of<AuthProvider>(context, listen: false);
+              final pacProv = Provider.of<PacientesProvider>(context, listen: false);
+              await pacProv.eliminarSeguimientoArritmia(token: authProv.token!, seguimientoId: id);
+              if (mounted) {
+                Navigator.pop(context); // Cerrar confirma
+                Navigator.pop(context); // Cerrar lista para refrescar
+              }
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -436,60 +490,94 @@ class _SeguimientosArritmiaDialogState extends State<_SeguimientosArritmiaDialog
     final riesgoCtrl = TextEditingController(text: widget.arritmia.nivelRiesgo);
     final estadoCtrl = TextEditingController(text: widget.arritmia.estado);
     final obsCtrl = TextEditingController();
+    bool isSavingLocal = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF161B22),
-        title: const Text('Nuevo Seguimiento', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: bpmCtrl,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Frecuencia Cardíaca (BPM)', labelStyle: TextStyle(color: _teal)),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF161B22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('Registrar Seguimiento Evolutivo', style: TextStyle(color: Colors.white)),
+          content: SizedBox(
+            width: 350,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDialogField(bpmCtrl, 'Frecuencia Cardíaca (BPM)', Icons.speed, isNumeric: true),
+                  _buildDialogField(riesgoCtrl, 'Nivel de Riesgo Actual', Icons.warning_amber),
+                  _buildDialogField(estadoCtrl, 'Estado Clínico', Icons.info_outline),
+                  _buildDialogField(obsCtrl, 'Observaciones de Evolución', Icons.notes, maxLines: 3),
+                ],
+              ),
             ),
-            TextField(
-              controller: riesgoCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Nivel de Riesgo', labelStyle: TextStyle(color: _teal)),
-            ),
-            TextField(
-              controller: estadoCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Estado', labelStyle: TextStyle(color: _teal)),
-            ),
-            TextField(
-              controller: obsCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Observaciones', labelStyle: TextStyle(color: _teal)),
+          ),
+          actions: [
+            TextButton(onPressed: isSavingLocal ? null : () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _teal),
+              onPressed: isSavingLocal ? null : () async {
+                if (bpmCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingrese la frecuencia cardíaca')));
+                  return;
+                }
+
+                setDialogState(() => isSavingLocal = true);
+                final authProv = Provider.of<AuthProvider>(context, listen: false);
+                final pacProv = Provider.of<PacientesProvider>(context, listen: false);
+                
+                final datos = {
+                  'fecha_control': DateTime.now().toIso8601String().split('T')[0],
+                  'frecuencia_cardiaca': int.tryParse(bpmCtrl.text) ?? 0,
+                  'nivel_riesgo': riesgoCtrl.text,
+                  'estado': estadoCtrl.text,
+                  'observaciones': obsCtrl.text,
+                };
+                
+                final ok = await pacProv.registrarSeguimientoArritmia(
+                  token: authProv.token!, 
+                  arritmiaId: widget.arritmia.id, 
+                  datos: datos
+                );
+
+                if (mounted) {
+                  setDialogState(() => isSavingLocal = false);
+                  if (ok) {
+                    Navigator.pop(context); // Cerrar form
+                    Navigator.pop(context); // Cerrar lista para refrescar
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Control registrado con éxito')));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al registrar control'), backgroundColor: Colors.redAccent));
+                  }
+                }
+              },
+              child: isSavingLocal 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Registrar', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              final authProv = Provider.of<AuthProvider>(context, listen: false);
-              final pacProv = Provider.of<PacientesProvider>(context, listen: false);
-              final datos = {
-                'fecha_control': DateTime.now().toIso8601String().split('T')[0],
-                'frecuencia_cardiaca': int.tryParse(bpmCtrl.text) ?? 0,
-                'nivel_riesgo': riesgoCtrl.text,
-                'estado': estadoCtrl.text,
-                'observaciones': obsCtrl.text,
-              };
-              final ok = await pacProv.registrarSeguimientoArritmia(token: authProv.token!, arritmiaId: widget.arritmia.id, datos: datos);
-              if (ok && context.mounted) {
-                Navigator.pop(context); // Cerrar form
-                Navigator.pop(context); // Cerrar historial
-              }
-            },
-            child: const Text('Registrar'),
-          ),
-        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogField(TextEditingController ctrl, String label, IconData icon, {int maxLines = 1, bool isNumeric = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: ctrl,
+        maxLines: maxLines,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: _teal, fontSize: 12),
+          prefixIcon: Icon(icon, color: Colors.white24, size: 18),
+          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _teal)),
+        ),
       ),
     );
   }

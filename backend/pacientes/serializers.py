@@ -68,7 +68,7 @@ class SeguimientoArritmiaSerializer(serializers.ModelSerializer):
             'registrado_por_nombre',
             'created_at',
         ]
-        read_only_fields = ['id', 'registrado_por', 'created_at']
+        read_only_fields = ['id', 'arritmia', 'registrado_por', 'created_at']
 
     def get_registrado_por_nombre(self, obj):
         if obj.registrado_por and hasattr(obj.registrado_por, 'perfil'):
