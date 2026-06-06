@@ -30,4 +30,7 @@ urlpatterns = [
 
     # Resumen Dashboard Doctor
     path('dashboard-doctor/', views.obtener_resumen_dashboard, name='dashboard_doctor'),
+
+    # Paciente: Mis Arritmias
+    path('mis-arritmias/', views.obtener_mis_arritmias, name='mis_arritmias'),
 ]

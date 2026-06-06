@@ -508,7 +508,25 @@ def obtener_resumen_dashboard(request):
     })
 
 
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_mis_arritmias(request):
+    if not es_paciente(request.user):
+        return Response({"error": "Solo para pacientes."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    arritmias = paciente.arritmias.all().order_by('-fecha_deteccion')
+    serializer = ArritmiaSerializer(arritmias, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 # --- Gestión de Reportes PDF ---
+
 
 
 @api_view(['GET'])

@@ -8,11 +8,13 @@ import '../data/paciente_model.dart';
 class PacientesProvider with ChangeNotifier {
   List<PacienteModel> _pacientes = [];
   PacienteModel? _perfilPaciente;
+  List<ArritmiaModel> _misArritmias = [];
   bool _isLoading = false;
   String? _ultimoError;
 
   List<PacienteModel> get pacientes    => _pacientes;
   PacienteModel?      get perfilPaciente => _perfilPaciente;
+  List<ArritmiaModel> get misArritmias => _misArritmias;
   bool                get isLoading   => _isLoading;
   String?             get ultimoError => _ultimoError;
 
@@ -38,6 +40,26 @@ class PacientesProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('fetchMisControles excepción: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchMisArritmias(String token) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/mis-arritmias/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _misArritmias = data.map((j) => ArritmiaModel.fromJson(j)).toList();
+      }
+    } catch (e) {
+      debugPrint('fetchMisArritmias excepción: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -16,6 +16,7 @@ import 'package:flutter_frontend/features/pacientes/presentation/screens/seguimi
 import 'package:flutter_frontend/features/pacientes/presentation/screens/examenes_medicos_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/tratamientos_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/reportes_screen.dart';
+import 'package:flutter_frontend/features/pacientes/presentation/screens/mis_arritmias_screen.dart';
 
 class MainScreen extends StatelessWidget {
   @override
@@ -68,6 +69,8 @@ class MainScreen extends StatelessWidget {
         return const TratamientosScreen();
       case "reportes_pacientes":
         return const ReportesScreen();
+      case "mis_arritmias":
+        return const MisArritmiasScreen();
       default:
         return DashboardScreen();
     }
