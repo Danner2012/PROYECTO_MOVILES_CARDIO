@@ -66,6 +66,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "5. Gestión de Exámenes",
+              svgSrc: "assets/icons/menu_doc.svg",
+              press: () {
+                menuController.setSelectedPage("gestion_examenes");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mi Asistente IA",

@@ -1,6 +1,26 @@
 # backend/pacientes/serializers.py
 from rest_framework import serializers
-from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia
+from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia, ExamenMedico
+
+
+class ExamenMedicoSerializer(serializers.ModelSerializer):
+    archivo_adjunto = serializers.FileField(use_url=True, required=False, allow_null=True)
+
+    class Meta:
+        model = ExamenMedico
+        fields = [
+            'id',
+            'paciente',
+            'doctor',
+            'tipo_examen',
+            'fecha_examen',
+            'resultado',
+            'descripcion',
+            'archivo_adjunto',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'paciente', 'doctor', 'created_at', 'updated_at']
 
 
 class ControlCardiologicoSerializer(serializers.ModelSerializer):
@@ -102,6 +122,7 @@ class PacienteSerializer(serializers.ModelSerializer):
     historial_controles = serializers.SerializerMethodField()
     historiales_clinicos = serializers.SerializerMethodField()
     arritmias = serializers.SerializerMethodField()
+    examenes_medicos = serializers.SerializerMethodField()
 
     # NUEVO: campo de foto con URL absoluta
     foto = serializers.ImageField(use_url=True, required=False, allow_null=True)
@@ -122,6 +143,7 @@ class PacienteSerializer(serializers.ModelSerializer):
             'historial_controles',
             'historiales_clinicos',
             'arritmias',
+            'examenes_medicos',
             'foto',
         ]
 
@@ -146,3 +168,8 @@ class PacienteSerializer(serializers.ModelSerializer):
         # Usamos el related_name definido en el modelo
         arritmias = obj.arritmias.all().order_by('-fecha_deteccion')
         return ArritmiaSerializer(arritmias, many=True, context=self.context).data
+
+    def get_examenes_medicos(self, obj):
+        # Usamos el related_name definido en el modelo
+        examenes = obj.examenes_medicos.all().order_by('-fecha_examen')
+        return ExamenMedicoSerializer(examenes, many=True, context=self.context).data

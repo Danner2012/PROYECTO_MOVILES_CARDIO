@@ -43,6 +43,7 @@ dependencies:
   image_picker: ^1.2.2
   file_picker: ^3.0.4
   intl: ^0.20.2
+  url_launcher: ^6.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

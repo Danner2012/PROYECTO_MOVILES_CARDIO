@@ -16,4 +16,8 @@ urlpatterns = [
     path('arritmias/<uuid:pk>/', views.detalle_arritmia, name='detalle_arritmia'),
     path('arritmias/<uuid:arritmia_id>/seguimiento/', views.registrar_seguimiento_arritmia, name='registrar_seguimiento'),
     path('seguimiento/<uuid:pk>/', views.eliminar_seguimiento_arritmia, name='eliminar_seguimiento'),
+
+    # Gestión de Exámenes CRUD
+    path('<int:paciente_id>/examenes/', views.gestionar_examenes_paciente, name='gestionar_examenes'),
+    path('examenes/<uuid:pk>/', views.detalle_examen_medico, name='detalle_examen'),
 ]

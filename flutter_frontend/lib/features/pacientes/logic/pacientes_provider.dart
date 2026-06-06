@@ -390,4 +390,117 @@ class PacientesProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ── Gestión de Exámenes Médicos ──────────────────────────────────────────
+
+  Future<bool> registrarExamenMedico({
+    required String token,
+    required int pacienteId,
+    required Map<String, String> datos,
+    Uint8List? archivoBytes,
+    String? archivoNombre,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final url = Uri.parse('$baseUrl/$pacienteId/examenes/');
+      final request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      datos.forEach((key, value) {
+        request.fields[key] = value;
+      });
+
+      if (archivoBytes != null && archivoBytes.isNotEmpty && archivoNombre != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'archivo_adjunto',
+          archivoBytes,
+          filename: archivoNombre,
+        ));
+      }
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+
+      if (response.statusCode == 201) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('registrarExamenMedico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> actualizarExamenMedico({
+    required String token,
+    required String examenId,
+    required Map<String, String> datos,
+    Uint8List? archivoBytes,
+    String? archivoNombre,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final url = Uri.parse('$baseUrl/examenes/$examenId/');
+      final request = http.MultipartRequest('PUT', url);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      datos.forEach((key, value) {
+        request.fields[key] = value;
+      });
+
+      if (archivoBytes != null && archivoBytes.isNotEmpty && archivoNombre != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'archivo_adjunto',
+          archivoBytes,
+          filename: archivoNombre,
+        ));
+      }
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+
+      if (response.statusCode == 200) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('actualizarExamenMedico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> eliminarExamenMedico({
+    required String token,
+    required String examenId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/examenes/$examenId/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('eliminarExamenMedico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

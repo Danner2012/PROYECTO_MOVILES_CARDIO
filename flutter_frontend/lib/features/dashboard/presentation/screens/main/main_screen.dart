@@ -13,6 +13,7 @@ import 'components/side_menu.dart';
 
 import 'package:flutter_frontend/features/pacientes/presentation/screens/historial_clinico_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/seguimiento_arritmias_screen.dart';
+import 'package:flutter_frontend/features/pacientes/presentation/screens/examenes_medicos_screen.dart';
 
 class MainScreen extends StatelessWidget {
   @override
@@ -59,6 +60,8 @@ class MainScreen extends StatelessWidget {
         return const HistorialClinicoScreen();
       case "seguimiento_arritmias":
         return const SeguimientoArritmiasScreen();
+      case "gestion_examenes":
+        return const ExamenesMedicosScreen();
       default:
         return DashboardScreen();
     }

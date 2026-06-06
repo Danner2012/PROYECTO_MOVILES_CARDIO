@@ -153,6 +153,47 @@ class SeguimientoArritmiaModel {
   }
 }
 
+class ExamenMedicoModel {
+  final String id;
+  final int paciente;
+  final String? doctor;
+  final String tipoExamen;
+  final String fechaExamen;
+  final String? resultado;
+  final String? descripcion;
+  final String? archivoAdjunto;
+  final String createdAt;
+  final String updatedAt;
+
+  ExamenMedicoModel({
+    required this.id,
+    required this.paciente,
+    this.doctor,
+    required this.tipoExamen,
+    required this.fechaExamen,
+    this.resultado,
+    this.descripcion,
+    this.archivoAdjunto,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ExamenMedicoModel.fromJson(Map<String, dynamic> json) {
+    return ExamenMedicoModel(
+      id: json['id'] ?? '',
+      paciente: json['paciente'] ?? 0,
+      doctor: json['doctor']?.toString(),
+      tipoExamen: json['tipo_examen'] ?? '',
+      fechaExamen: json['fecha_examen'] ?? '',
+      resultado: json['resultado'],
+      descripcion: json['descripcion'],
+      archivoAdjunto: json['archivo_adjunto'],
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
+    );
+  }
+}
+
 class ArritmiaModel {
   final String id;
   final int paciente;
@@ -213,6 +254,7 @@ class PacienteModel {
   final List<ControlCardioModel> historialControles;
   final List<HistorialClinicoModel> historialesClinicos;
   final List<ArritmiaModel> arritmias;
+  final List<ExamenMedicoModel> examenesMedicos;
 
   PacienteModel({
     required this.id,
@@ -228,6 +270,7 @@ class PacienteModel {
     required this.historialControles,
     required this.historialesClinicos,
     required this.arritmias,
+    required this.examenesMedicos,
   });
 
   factory PacienteModel.fromJson(Map<String, dynamic> json) {
@@ -246,6 +289,11 @@ class PacienteModel {
         .map((aJson) => ArritmiaModel.fromJson(aJson))
         .toList();
 
+    var listaExamenesRaw = json['examenes_medicos'] as List? ?? [];
+    List<ExamenMedicoModel> examenesMapeados = listaExamenesRaw
+        .map((eJson) => ExamenMedicoModel.fromJson(eJson))
+        .toList();
+
     return PacienteModel(
       id: json['id'] ?? 0,
       nombre: json['nombre'] ?? 'Sin nombre',
@@ -260,6 +308,7 @@ class PacienteModel {
       historialControles: controlesMapeados,
       historialesClinicos: historialesMapeados,
       arritmias: arritmiasMapeadas,
+      examenesMedicos: examenesMapeados,
     );
   }
 

@@ -146,5 +146,36 @@ class SeguimientoArritmia(models.Model):
         verbose_name_plural = "Seguimientos de Arritmias"
         ordering = ['-fecha_control']
 
+class ExamenMedico(models.Model):
+    TIPO_EXAMEN_CHOICES = [
+        ('ECG', 'Electrocardiograma'),
+        ('HOLTER', 'Holter'),
+        ('ECOCARDIOGRAMA', 'Ecocardiograma'),
+        ('INFORME_CARDIOLOGICO', 'Informe Cardiológico'),
+        ('OTRO', 'Otro'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='examenes_medicos')
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='examenes_registrados'
+    )
+    
+    tipo_examen = models.CharField(max_length=50, choices=TIPO_EXAMEN_CHOICES)
+    fecha_examen = models.DateField()
+    resultado = models.TextField(blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    archivo_adjunto = models.FileField(upload_to='examenes_medicos/%Y/%m/', blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Examen Médico"
+        verbose_name_plural = "Exámenes Médicos"
+        ordering = ['-fecha_examen']
+
     def __str__(self):
-        return f"Control {self.fecha_control} - {self.arritmia.tipo_arritmia}"
+        return f"{self.get_tipo_examen_display()} - {self.paciente.usuario.email}"
