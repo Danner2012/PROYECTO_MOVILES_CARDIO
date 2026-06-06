@@ -17,6 +17,7 @@ class PatientAiScreen extends StatefulWidget {
 class _PatientAiScreenState extends State<PatientAiScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isChatOpen = false;
 
   @override
   void initState() {
@@ -63,32 +64,101 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
     final pacientesProvider = Provider.of<PacientesProvider>(context);
     final ollamaProvider = Provider.of<PatientOllamaProvider>(context);
 
-    return Container(
-      padding: const EdgeInsets.all(defaultPadding),
-      child: Column(
-        children: [
-          const Header(),
-          const SizedBox(height: defaultPadding),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // PANEL IZQUIERDO: MIS REGISTROS
-                Expanded(
-                  flex: 3,
-                  child: _buildRecordsPanel(pacientesProvider),
+    return Stack(
+      children: [
+        // CONTENIDO PRINCIPAL (HISTORIAL) - OCUPA TODO EL ANCHO
+        Container(
+          padding: const EdgeInsets.all(defaultPadding),
+          child: Column(
+            children: [
+              const Header(),
+              const SizedBox(height: defaultPadding),
+              Expanded(
+                child: _buildRecordsPanel(pacientesProvider),
+              ),
+            ],
+          ),
+        ),
+
+        // VENTANA DE CHAT FLOTANTE
+        if (_isChatOpen)
+          Positioned(
+            right: 20,
+            bottom: 90,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 350,
+                height: 500,
+                decoration: BoxDecoration(
+                  color: secondaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                  border: Border.all(color: primaryColor.withOpacity(0.3)),
                 ),
-                const SizedBox(width: defaultPadding),
-                // PANEL DERECHO: MI ASISTENTE IA
-                Expanded(
-                  flex: 2,
-                  child: _buildChatPanel(ollamaProvider),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
+                    children: [
+                      // Barra superior de la ventana
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                        color: primaryColor,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Asistente IA",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                              onPressed: () => setState(() => _isChatOpen = false),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Cuerpo del chat
+                      Expanded(
+                        child: _buildChatPanelContent(ollamaProvider),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+
+        // BURBUJA FLOTANTE (BOTÓN)
+        Positioned(
+          right: 20,
+          bottom: 20,
+          child: FloatingActionButton(
+            backgroundColor: primaryColor,
+            onPressed: () {
+              setState(() {
+                _isChatOpen = !_isChatOpen;
+              });
+            },
+            child: Icon(
+              _isChatOpen ? Icons.close : Icons.auto_awesome,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -131,7 +201,6 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
   }
 
   Widget _buildControlCard(ControlCardioModel control) {
-    // URL base del servidor para las imágenes
     const String serverUrl = "http://127.0.0.1:8000";
     String? imageUrl;
     if (control.archivoAdjunto != null) {
@@ -146,18 +215,11 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            secondaryColor,
-            secondaryColor.withOpacity(0.8),
-          ],
+          colors: [secondaryColor, secondaryColor.withOpacity(0.8)],
         ),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5)),
         ],
         border: Border.all(color: primaryColor.withOpacity(0.1)),
       ),
@@ -166,7 +228,6 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabecera de la tarjeta con color distintivo
             Container(
               padding: const EdgeInsets.symmetric(horizontal: defaultPadding, vertical: 8),
               color: primaryColor.withOpacity(0.1),
@@ -177,23 +238,18 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
                     children: [
                       const Icon(Icons.calendar_today, size: 14, color: primaryColor),
                       const SizedBox(width: 8),
-                      Text(
-                        control.fecha,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-                      ),
+                      Text(control.fecha, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
                     ],
                   ),
                   _buildStatusChip(control.diagnosticoEcg),
                 ],
               ),
             ),
-            
             Padding(
               padding: const EdgeInsets.all(defaultPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Métricas principales con diseño de rejilla
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -202,14 +258,10 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
                       _buildMetricBox("SatO2", "${control.saturacionOxigeno}", "%", Icons.air, Colors.cyanAccent),
                     ],
                   ),
-                  
                   const SizedBox(height: 20),
-                  
-                  // Síntomas con badges
                   const Text("SÍNTOMAS Y ALERTAS", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 1.2)),
                   const SizedBox(height: 8),
                   Text(control.sintomas, style: const TextStyle(fontSize: 13, color: Colors.white70)),
-                  
                   if (control.dolorPecho || control.disnea || control.mareos || control.edema)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -224,89 +276,132 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
                         ],
                       ),
                     ),
-                  
                   const SizedBox(height: 15),
                   const Divider(color: Colors.white10),
                   const SizedBox(height: 10),
-                  
-                  // Evolución y Plan
                   _buildDetailSection("Evolución Clínica", control.evolucion, Icons.notes_rounded),
                   const SizedBox(height: 10),
                   _buildDetailSection("Plan y Medicación", control.planMedicacion, Icons.medical_services_outlined),
-                  
                   if (control.proximaCita != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: primaryColor.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.event, size: 16, color: primaryColor),
-                            const SizedBox(width: 10),
-                            const Text("Próxima Cita: ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                            Text(control.proximaCita!, style: const TextStyle(fontSize: 12, color: primaryColor)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  
-                  // IMAGEN ADJUNTA (ECG / ESTUDIO)
+                    _buildNextAppointment(control.proximaCita!),
                   if (imageUrl != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("ESTUDIO ADJUNTO", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 1.2)),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: () => _showImageDialog(context, imageUrl!),
-                            child: Container(
-                              height: 150,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white10),
-                                image: DecorationImage(
-                                  image: NetworkImage(imageUrl),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
-                                  ),
-                                ),
-                                alignment: Alignment.bottomCenter,
-                                padding: const EdgeInsets.all(8),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.fullscreen, color: Colors.white, size: 16),
-                                    SizedBox(width: 5),
-                                    Text("Ver estudio completo", style: TextStyle(color: Colors.white, fontSize: 11)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildAttachment(context, imageUrl),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNextAppointment(String date) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: primaryColor.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.event, size: 16, color: primaryColor),
+            const SizedBox(width: 10),
+            const Text("Próxima Cita: ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(date, style: const TextStyle(fontSize: 12, color: primaryColor)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachment(BuildContext context, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("ESTUDIO ADJUNTO", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => _showImageDialog(context, url),
+            child: Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white10),
+                image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.5)]),
+                ),
+                alignment: Alignment.bottomCenter,
+                padding: const EdgeInsets.all(8),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                    SizedBox(width: 5),
+                    Text("Ver estudio completo", style: TextStyle(color: Colors.white, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatPanelContent(PatientOllamaProvider ollama) {
+    return Container(
+      padding: const EdgeInsets.all(defaultPadding),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: ollama.messages.length,
+              itemBuilder: (context, index) {
+                final message = ollama.messages[index];
+                final isUser = message['role'] == 'user';
+                return _buildChatBubble(message['content'] ?? "", isUser);
+              },
+            ),
+          ),
+          if (ollama.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: LinearProgressIndicator(backgroundColor: bgColor, color: primaryColor),
+            ),
+          const SizedBox(height: defaultPadding),
+          TextField(
+            controller: _chatController,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: "Pregúntame algo...",
+              hintStyle: const TextStyle(color: Colors.white38),
+              fillColor: bgColor,
+              filled: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.send, color: primaryColor, size: 20),
+                onPressed: () {
+                  if (_chatController.text.isNotEmpty) {
+                    ollama.sendMessage(_chatController.text, onDone: _scrollToBottom);
+                    _chatController.clear();
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -319,10 +414,7 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: primaryColor.withOpacity(0.5)),
       ),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryColor),
-      ),
+      child: Text(text.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryColor)),
     );
   }
 
@@ -381,10 +473,7 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         const SizedBox(height: 5),
         Padding(
           padding: const EdgeInsets.only(left: 22),
-          child: Text(
-            content.isEmpty ? "No se registraron detalles adicionales." : content,
-            style: const TextStyle(fontSize: 13, color: Colors.white70),
-          ),
+          child: Text(content.isEmpty ? "No se registraron detalles adicionales." : content, style: const TextStyle(fontSize: 13, color: Colors.white70)),
         ),
       ],
     );
@@ -399,86 +488,10 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         child: Stack(
           alignment: Alignment.topRight,
           children: [
-            InteractiveViewer(
-              panEnabled: true,
-              minScale: 0.5,
-              maxScale: 4,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(url, fit: BoxFit.contain),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 30),
-              onPressed: () => Navigator.pop(context),
-            ),
+            InteractiveViewer(panEnabled: true, minScale: 0.5, maxScale: 4, child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(url, fit: BoxFit.contain))),
+            IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildChatPanel(PatientOllamaProvider ollama) {
-    return Container(
-      padding: const EdgeInsets.all(defaultPadding),
-      decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        border: Border.all(color: primaryColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: primaryColor),
-              const SizedBox(width: 10),
-              Text(
-                "Asistente AI",
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ],
-          ),
-          const SizedBox(height: defaultPadding),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: ollama.messages.length,
-              itemBuilder: (context, index) {
-                final message = ollama.messages[index];
-                final isUser = message['role'] == 'user';
-                return _buildChatBubble(message['content'] ?? "", isUser);
-              },
-            ),
-          ),
-          if (ollama.isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: LinearProgressIndicator(backgroundColor: bgColor, color: primaryColor),
-            ),
-          const SizedBox(height: defaultPadding),
-          TextField(
-            controller: _chatController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: "Pregúntame sobre tus datos...",
-              fillColor: bgColor,
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.send, color: primaryColor),
-                onPressed: () {
-                  if (_chatController.text.isNotEmpty) {
-                    ollama.sendMessage(_chatController.text, onDone: _scrollToBottom);
-                    _chatController.clear();
-                  }
-                },
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -494,10 +507,7 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
           borderRadius: BorderRadius.circular(15),
           border: isUser ? null : Border.all(color: primaryColor.withOpacity(0.3)),
         ),
-        child: Text(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
+        child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13)),
       ),
     );
   }
