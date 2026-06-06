@@ -69,38 +69,27 @@ class _EcgScreenState extends State<EcgScreen> with SingleTickerProviderStateMix
   // =========================================================================
   // DETECTOR DE INACTIVIDAD (Watchdog de 5 segundos)
   // =========================================================================
-  void _checkWatchdogTimeout() {
-    if (_lastRecordTime == null) return;
+  
 
-    final difference = DateTime.now().difference(_lastRecordTime!).inSeconds;
-
-    // Si pasaron más de 5 segundos sin actualizaciones reales en la BD
-    if (difference > 5 && _isHardwareConnected) {
-      setState(() {
-        _isHardwareConnected = false;
-        _deviceStatus = 'Desconectado';
-        _currentBpm = '--';
-        _currentHrv = '--';
-        _generalDiagnostic = 'Sin Señal';
-        
-        // Al desconectarse, aplanamos la onda del ECG (Flatline con micro-ruido muerto)
-        _generateFlatlinePoints(); 
-      });
-    }
-  }
+  // Variable de estado que debes añadir al inicio de tu clase '_EcgScreenState' junto a las demás
+  String _lastProcessedId = ''; 
 
   // =========================================================================
-  // CONSUMO DE API Y PARSEO PROFESIONAL DE DATOS
+  // CONSUMO DE API CORREGIDO (Watchdog por flujo de datos dinámico)
   // =========================================================================
   Future<void> _fetchEcgMetrics() async {
     final url = Uri.parse('http://127.0.0.1:8000/api/pacientes/ecg-metrics/');
 
     try {
+      print('======================================================');
+      print('📡 [HTTP] Iniciando petición a: $url');
+      
       final prefs = await SharedPreferences.getInstance();
       final String? tokenJWT = prefs.getString('jwt_token') ?? prefs.getString('token'); 
 
       if (tokenJWT == null || tokenJWT.isEmpty) {
-        return; // Evita romper la app si expira la sesión en segundo plano
+        print('❌ [AUTH] Error: No se encontró un token válido en SharedPreferences.');
+        return; 
       }
 
       final response = await http.get(
@@ -113,64 +102,37 @@ class _EcgScreenState extends State<EcgScreen> with SingleTickerProviderStateMix
 
       if (!mounted) return;
 
-      // ... (dentro de tu método _fetchEcgMetrics, reemplaza el bloque del setState)
-
       if (response.statusCode == 200) {
         final List<dynamic> decodedData = json.decode(response.body);
+        print('🔢 [DATA] Registros encontrados en el paquete: ${decodedData.length}');
 
         if (decodedData.isEmpty) {
+          print('⚠️ [DATA] Arreglo vacío de métricas.');
           if (_isLoading) setState(() => _isLoading = false);
           return;
         }
 
-        // ====== REVISIÓN Y PARSEO SEGURO DE LA MARCA DE TIEMPO PRINCIPAL ======
+        // Capturamos el ID del registro más reciente en el tope de la lista
         final dynamic latestRawItem = decodedData.first;
-        DateTime latestRecordUtc;
+        final String currentLatestId = latestRawItem['id']?.toString() ?? '';
         
-        try {
-          if (latestRawItem['created_at'] != null && latestRawItem['created_at'].toString().isNotEmpty) {
-            latestRecordUtc = DateTime.parse(latestRawItem['created_at'].toString());
-          } else {
-            latestRecordUtc = DateTime.now().toUtc(); // Fallback si es nulo o vacío
-          }
-        } catch (e) {
-          latestRecordUtc = DateTime.now().toUtc(); // Fallback si el string no tiene formato ISO válido
-          debugPrint('Aviso: Formato de fecha del backend no ISO, usando hora actual.');
+        // EVALUACIÓN DEL WATCHDOG: Si el ID cambió respecto al ciclo anterior, ¡el hardware está transmitiendo en vivo!
+        bool hasNewData = false;
+        if (_lastProcessedId.isEmpty) {
+          // Primer ciclo de carga
+          hasNewData = true; 
+        } else if (currentLatestId != _lastProcessedId) {
+          // Llegó un paquete nuevo con ID diferente
+          hasNewData = true;
         }
         
-        _lastRecordTime = latestRecordUtc.toLocal();
+        _lastProcessedId = currentLatestId;
+        print('🆔 [ID MONITOR] Anterior: $_lastProcessedId | Actual: $currentLatestId -> ¿Flujo Activo?: $hasNewData');
 
-        // Calcular la antigüedad del registro respecto a la hora local actual
-        final int ageInSeconds = DateTime.now().difference(_lastRecordTime!).inSeconds.abs();
-        
         setState(() {
           _tableData = decodedData.map((item) {
-            String fechaFormateada = '---';
-            String horaFormateada = '';
-            
-            // ====== PARSEO INDIVIDUAL SEGURO DE FILAS ======
-            if (item['created_at'] != null && item['created_at'].toString().isNotEmpty) {
-              try {
-                // ... dentro de tu map en _fetchEcgMetrics
-DateTime dateTime = DateTime.parse(item['created_at'].toString()).toLocal();
-
-// Formato deseado: 2026-06-05 y 09:39:44
-String fechaFormateada = "${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}";
-String horaFormateada = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}";
-
-// ... más abajo, en el return del map:
-return {
-  // ...
-  'fecha': fechaFormateada,
-  'hora': horaFormateada,
-  // ...
-};
-              } catch (e) {
-                // Si una fila tiene error de formato, evitamos el crash asignando valores por defecto
-                fechaFormateada = '---';
-                horaFormateada = '--:--:--';
-              }
-            }
+            String fechaDisplay = item['fecha']?.toString() ?? '---';
+            String horaDisplay = item['hora']?.toString() ?? '--:--:--';
 
             double bpmValue = double.tryParse(item['bpm']?.toString() ?? '0') ?? 0.0;
             String bpmDisplay = bpmValue < 10 ? 'Calibrando' : bpmValue.toStringAsFixed(1);
@@ -186,45 +148,62 @@ return {
 
             return {
               'id': item['id']?.toString() ?? '',
-              'fecha': fechaFormateada,
-              'hora': horaFormateada,
+              'fecha': fechaDisplay,
+              'hora': horaDisplay,
               'bpm': bpmDisplay,
               'bpm_average': item['bpm_average']?.toString() ?? '--',
               'hrv': item['hrv']?.toString() ?? '--',
-              'beat_detected': (item['beat_detected'] == true || item['beat_detected'] == 'true') ? 'Sí' : 'No',
-              'electrodes_connected': (item['electrodes_connected'] == true || item['electrodes_connected'] == 'true') ? 'Conectado' : 'Desconectado',
-              'estado': estadoCalculado,
+              'beat_detected': (item['beat_detected'] == true || item['beat_detected'] == 'true' || item['beat_detected'] == 'Sí') ? 'Sí' : 'No',
+              'electrodes_connected': (item['electrodes_connected'] == true || item['electrodes_connected'] == 'true' || item['electrodes_connected'] == 'Conectado') ? 'Conectado' : 'Desconectado',
+              'estado': item['estado']?.toString() ?? estadoCalculado,
             };
           }).toList();
 
-          // Evaluar conectividad de hardware real vs el Watchdog temporal
-          if (ageInSeconds <= 5) {
+          // Lógica adaptativa de la interfaz según el flujo de datos real
+          if (hasNewData) {
             _isHardwareConnected = true;
+            _lastRecordTime = DateTime.now(); // Reseteamos la estampa local para el temporizador secundario
+            
             final latest = _tableData.first;
             _currentBpm = latest['bpm']!;
             _currentHrv = latest['hrv'] != '--' ? "${latest['hrv']} ms" : '--';
             _deviceStatus = latest['electrodes_connected']!;
             _generalDiagnostic = latest['estado']!;
             
-            _generateEcgWavePoints(); // Dibujar el pulso activo
-          } else {
-            _isHardwareConnected = false;
-            _deviceStatus = 'Desconectado';
-            _currentBpm = '--';
-            _currentHrv = '--';
-            _generalDiagnostic = 'Sin Señal';
-            
-            _generateFlatlinePoints(); // Dibujar línea muerta
+            _generateEcgWavePoints(); // Activa la animación del pulso
+            print('💚 [MONITOR] Telemetría online. Dibujando complejo dinámico P-Q-R-S-T.');
           }
 
           _isLoading = false;
         });
+      } else {
+        print('❌ [HTTP ERROR] Status: ${response.statusCode}');
       }
-
-// ... (el resto del código de la función permanece igual)
     } catch (e) {
-      // Manejo silencioso durante el sondeo repetitivo para evitar overlays de error molestos
-      debugPrint('Error de comunicación continua: $e');
+      print('🚨 [CRASH GENERAL]: $e');
+    }
+    print('======================================================');
+  }
+
+  // =========================================================================
+  // DETECTOR DE INACTIVIDAD TEMPORAL (Garantiza caída si el script de Python se apaga)
+  // =========================================================================
+  void _checkWatchdogTimeout() {
+    if (_lastRecordTime == null) return;
+    
+    // Si pasan más de 6 segundos sin que _fetchEcgMetrics marque 'hasNewData = true'
+    final int difference = DateTime.now().difference(_lastRecordTime!).inSeconds;
+
+    if (difference > 6 && _isHardwareConnected) {
+      setState(() {
+        _isHardwareConnected = false;
+        _deviceStatus = 'Desconectado';
+        _currentBpm = '--';
+        _currentHrv = '--';
+        _generalDiagnostic = 'Sin Señal';
+        _generateFlatlinePoints(); // Aplanar onda si el script de Python se detuvo
+        print('🛑 [WATCHDOG] Exceso de tiempo sin cambios de registros. Línea muerta aplicada.');
+      });
     }
   }
 
