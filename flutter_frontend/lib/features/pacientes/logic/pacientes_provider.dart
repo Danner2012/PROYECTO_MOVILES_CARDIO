@@ -242,13 +242,148 @@ class PacientesProvider with ChangeNotifier {
         Uri.parse('$baseUrl/historial/$historialId/'),
         headers: _headers(token),
       );
-      if (response.statusCode == 204) {
+      if (response.statusCode == 200 || response.statusCode == 204) {
         await cargarPacientes(token);
         return true;
       }
       return false;
     } catch (e) {
       debugPrint('eliminarHistorialClinico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Gestión de Arritmias ──────────────────────────────────────────────────
+  
+  Future<bool> registrarArritmia({
+    required String token,
+    required int pacienteId,
+    required Map<String, dynamic> datos,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/$pacienteId/arritmias/'),
+        headers: _headers(token),
+        body: json.encode(datos),
+      );
+      if (response.statusCode == 201) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('registrarArritmia excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> actualizarArritmia({
+    required String token,
+    required String arritmiaId,
+    required Map<String, dynamic> datos,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/arritmias/$arritmiaId/'),
+        headers: _headers(token),
+        body: json.encode(datos),
+      );
+      if (response.statusCode == 200) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('actualizarArritmia excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> eliminarArritmia({
+    required String token,
+    required String arritmiaId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/arritmias/$arritmiaId/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('eliminarArritmia excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Gestión de Seguimientos de Arritmias ──────────────────────────────────
+
+  Future<bool> registrarSeguimientoArritmia({
+    required String token,
+    required String arritmiaId,
+    required Map<String, dynamic> datos,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/arritmias/$arritmiaId/seguimiento/'),
+        headers: _headers(token),
+        body: json.encode(datos),
+      );
+      if (response.statusCode == 201) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('registrarSeguimientoArritmia excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> eliminarSeguimientoArritmia({
+    required String token,
+    required String seguimientoId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/seguimiento/$seguimientoId/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('eliminarSeguimientoArritmia excepción: $e');
       return false;
     } finally {
       _isLoading = false;

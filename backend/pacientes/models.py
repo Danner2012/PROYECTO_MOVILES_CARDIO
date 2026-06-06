@@ -1,4 +1,3 @@
-# backend/pacientes/models.py
 import uuid
 from django.db import models
 from django.conf import settings
@@ -95,3 +94,57 @@ class HistorialClinico(models.Model):
 
     def __str__(self):
         return f"Historial {self.paciente.usuario.email} - {self.fecha_registro.strftime('%d/%m/%Y')}"
+
+
+class Arritmia(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='arritmias')
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='arritmias_detectadas'
+    )
+    
+    tipo_arritmia = models.CharField(max_length=100)
+    fecha_deteccion = models.DateField()
+    nivel_riesgo = models.CharField(max_length=50) # Bajo, Medio, Alto, Crítico
+    estado = models.CharField(max_length=50) # Activa, En tratamiento, Controlada
+    observaciones = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Arritmia"
+        verbose_name_plural = "Arritmias"
+        ordering = ['-fecha_deteccion']
+
+    def __str__(self):
+        return f"{self.tipo_arritmia} - {self.paciente.usuario.email}"
+
+
+class SeguimientoArritmia(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    arritmia = models.ForeignKey(Arritmia, on_delete=models.CASCADE, related_name='seguimientos')
+    
+    fecha_control = models.DateField()
+    frecuencia_cardiaca = models.IntegerField()
+    nivel_riesgo = models.CharField(max_length=50)
+    estado = models.CharField(max_length=50)
+    observaciones = models.TextField(blank=True, null=True)
+    
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='seguimientos_arritmias_realizados'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Seguimiento de Arritmia"
+        verbose_name_plural = "Seguimientos de Arritmias"
+        ordering = ['-fecha_control']
+
+    def __str__(self):
+        return f"Control {self.fecha_control} - {self.arritmia.tipo_arritmia}"

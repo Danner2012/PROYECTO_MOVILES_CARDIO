@@ -6,8 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from .models import Paciente, ControlCardiologico, HistorialClinico
-from .serializers import PacienteSerializer, ControlCardiologicoSerializer, HistorialClinicoSerializer
+from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia
+from .serializers import (
+    PacienteSerializer, 
+    ControlCardiologicoSerializer, 
+    HistorialClinicoSerializer,
+    ArritmiaSerializer,
+    SeguimientoArritmiaSerializer
+)
 
 User = get_user_model()
 
@@ -24,6 +30,96 @@ def es_paciente(usuario):
         return str(usuario.rol).lower() == 'paciente'
     except Exception:
         return False
+
+
+# --- Seguimiento de Arritmias CRUD ---
+
+@api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def gestionar_arritmias_paciente(request, paciente_id):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        paciente = Paciente.objects.get(id=paciente_id, doctor=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Paciente no encontrado o no pertenece a tu lista."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        arritmias = paciente.arritmias.all()
+        serializer = ArritmiaSerializer(arritmias, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = ArritmiaSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(paciente=paciente, doctor=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def detalle_arritmia(request, pk):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        arritmia = Arritmia.objects.get(id=pk, doctor=request.user)
+    except Arritmia.DoesNotExist:
+        return Response({"error": "Arritmia no encontrada o no tienes permiso."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = ArritmiaSerializer(arritmia, context={'request': request})
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = ArritmiaSerializer(arritmia, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        arritmia.delete()
+        return Response({"mensaje": "Registro eliminado."}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def registrar_seguimiento_arritmia(request, arritmia_id):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        arritmia = Arritmia.objects.get(id=arritmia_id, doctor=request.user)
+    except Arritmia.DoesNotExist:
+        return Response({"error": "Arritmia no encontrada o no tienes permiso."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = SeguimientoArritmiaSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(arritmia=arritmia, registrado_por=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def eliminar_seguimiento_arritmia(request, pk):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        seguimiento = SeguimientoArritmia.objects.get(id=pk, registrado_por=request.user)
+    except SeguimientoArritmia.DoesNotExist:
+        return Response({"error": "Seguimiento no encontrado o no tienes permiso."}, status=status.HTTP_404_NOT_FOUND)
+
+    seguimiento.delete()
+    return Response({"mensaje": "Control eliminado."}, status=status.HTTP_200_OK)
 
 
 # --- Historial Clínico CRUD ---
@@ -46,7 +142,6 @@ def gestionar_historial_paciente(request, paciente_id):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        # ... (rest of method unchanged)
         serializer = HistorialClinicoSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(paciente=paciente, doctor=request.user)
@@ -85,7 +180,6 @@ def detalle_historial_clinico(request, pk):
 
 # --- Vistas Existentes ---
 
-
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -122,7 +216,7 @@ def listar_pacientes(request):
         Paciente.objects
         .filter(doctor=request.user)
         .select_related('usuario', 'usuario__perfil')
-        .prefetch_related('historial_controles')
+        .prefetch_related('historial_controles', 'historiales_clinicos', 'arritmias')
         .order_by('-fecha_registro')
     )
     serializer = PacienteSerializer(
@@ -136,7 +230,7 @@ def listar_pacientes(request):
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-@parser_classes([MultiPartParser, FormParser, JSONParser])  # ← permite multipart
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def registrar_paciente(request):
     if not es_doctor(request.user):
         return Response(
@@ -144,7 +238,6 @@ def registrar_paciente(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # Con multipart, los datos vienen en request.data, incluso los archivos
     email = request.data.get('email', '').strip()
     if not email:
         return Response(
@@ -191,7 +284,7 @@ def registrar_paciente(request):
         talla_inicial     = talla,
         alergias          = request.data.get('alergias', 'Ninguna'),
         antecedentes_base = request.data.get('antecedentes_base', 'Ninguno'),
-        foto              = request.FILES.get('foto'),   # ← guardamos la foto si viene
+        foto              = request.FILES.get('foto'),
     )
 
     serializer = PacienteSerializer(paciente, context={'request': request})
@@ -204,14 +297,12 @@ def sincronizar_con_ollama(paciente, control):
     """Sincroniza el nuevo control con la base de datos de Ollama incluyendo todos los datos clínicos."""
     url = "http://localhost:8001/records"
     
-    # Obtener nombre del perfil
     try:
         perfil = paciente.usuario.perfil
         nombre_paciente = f"{perfil.nombre} {perfil.apellido}".strip()
     except Exception:
         nombre_paciente = paciente.usuario.email
 
-    # Formatear booleanos para que la IA los entienda mejor
     def si_no(val): return "Sí" if val else "No"
     
     payload = {
@@ -254,10 +345,7 @@ def agregar_control(request, paciente_id):
     )
     if serializer.is_valid():
         instancia = serializer.save(paciente=paciente)
-        
-        # Sincronizar con la IA
         sincronizar_con_ollama(paciente, instancia)
-
         respuesta = ControlCardiologicoSerializer(
             instancia,
             context={'request': request},

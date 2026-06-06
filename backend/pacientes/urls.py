@@ -10,4 +10,10 @@ urlpatterns = [
     # Historial Clínico CRUD
     path('<int:paciente_id>/historial/', views.gestionar_historial_paciente, name='gestionar_historial'),
     path('historial/<uuid:pk>/', views.detalle_historial_clinico, name='detalle_historial'),
+
+    # Seguimiento de Arritmias CRUD
+    path('<int:paciente_id>/arritmias/', views.gestionar_arritmias_paciente, name='gestionar_arritmias'),
+    path('arritmias/<uuid:pk>/', views.detalle_arritmia, name='detalle_arritmia'),
+    path('arritmias/<uuid:arritmia_id>/seguimiento/', views.registrar_seguimiento_arritmia, name='registrar_seguimiento'),
+    path('seguimiento/<uuid:pk>/', views.eliminar_seguimiento_arritmia, name='eliminar_seguimiento'),
 ]

@@ -115,6 +115,90 @@ class HistorialClinicoModel {
   }
 }
 
+class SeguimientoArritmiaModel {
+  final String id;
+  final String arritmia;
+  final String fechaControl;
+  final int frecuenciaCardiaca;
+  final String nivelRiesgo;
+  final String estado;
+  final String? observaciones;
+  final String? registradoPorNombre;
+  final String createdAt;
+
+  SeguimientoArritmiaModel({
+    required this.id,
+    required this.arritmia,
+    required this.fechaControl,
+    required this.frecuenciaCardiaca,
+    required this.nivelRiesgo,
+    required this.estado,
+    this.observaciones,
+    this.registradoPorNombre,
+    required this.createdAt,
+  });
+
+  factory SeguimientoArritmiaModel.fromJson(Map<String, dynamic> json) {
+    return SeguimientoArritmiaModel(
+      id: json['id'] ?? '',
+      arritmia: json['arritmia'] ?? '',
+      fechaControl: json['fecha_control'] ?? '',
+      frecuenciaCardiaca: json['frecuencia_cardiaca'] ?? 0,
+      nivelRiesgo: json['nivel_riesgo'] ?? '',
+      estado: json['estado'] ?? '',
+      observaciones: json['observaciones'],
+      registradoPorNombre: json['registrado_por_nombre'],
+      createdAt: json['created_at'] ?? '',
+    );
+  }
+}
+
+class ArritmiaModel {
+  final String id;
+  final int paciente;
+  final String? doctor;
+  final String tipoArritmia;
+  final String fechaDeteccion;
+  final String nivelRiesgo;
+  final String estado;
+  final String? observaciones;
+  final List<SeguimientoArritmiaModel> seguimientos;
+  final String createdAt;
+
+  ArritmiaModel({
+    required this.id,
+    required this.paciente,
+    this.doctor,
+    required this.tipoArritmia,
+    required this.fechaDeteccion,
+    required this.nivelRiesgo,
+    required this.estado,
+    this.observaciones,
+    required this.seguimientos,
+    required this.createdAt,
+  });
+
+  factory ArritmiaModel.fromJson(Map<String, dynamic> json) {
+    var listaSeguimientosRaw = json['seguimientos'] as List? ?? [];
+    List<SeguimientoArritmiaModel> seguimientosMapeados = listaSeguimientosRaw
+        .map((sJson) => SeguimientoArritmiaModel.fromJson(sJson))
+        .toList();
+
+    return ArritmiaModel(
+      id: json['id'] ?? '',
+      paciente: json['paciente'] ?? 0,
+      doctor: json['doctor']?.toString(),
+      tipoArritmia: json['tipo_arritmia'] ?? '',
+      fechaDeteccion: json['fecha_deteccion'] ?? '',
+      nivelRiesgo: json['nivel_riesgo'] ?? '',
+      estado: json['estado'] ?? '',
+      observaciones: json['observaciones'],
+      seguimientos: seguimientosMapeados,
+      createdAt: json['created_at'] ?? '',
+    );
+  }
+}
+
 class PacienteModel {
   final int id;
   final String nombre;
@@ -128,6 +212,7 @@ class PacienteModel {
   final String? foto;
   final List<ControlCardioModel> historialControles;
   final List<HistorialClinicoModel> historialesClinicos;
+  final List<ArritmiaModel> arritmias;
 
   PacienteModel({
     required this.id,
@@ -142,6 +227,7 @@ class PacienteModel {
     this.foto,
     required this.historialControles,
     required this.historialesClinicos,
+    required this.arritmias,
   });
 
   factory PacienteModel.fromJson(Map<String, dynamic> json) {
@@ -153,6 +239,11 @@ class PacienteModel {
     var listaHistorialesRaw = json['historiales_clinicos'] as List? ?? [];
     List<HistorialClinicoModel> historialesMapeados = listaHistorialesRaw
         .map((hJson) => HistorialClinicoModel.fromJson(hJson))
+        .toList();
+
+    var listaArritmiasRaw = json['arritmias'] as List? ?? [];
+    List<ArritmiaModel> arritmiasMapeadas = listaArritmiasRaw
+        .map((aJson) => ArritmiaModel.fromJson(aJson))
         .toList();
 
     return PacienteModel(
@@ -168,6 +259,7 @@ class PacienteModel {
       foto: json['foto'],
       historialControles: controlesMapeados,
       historialesClinicos: historialesMapeados,
+      arritmias: arritmiasMapeadas,
     );
   }
 

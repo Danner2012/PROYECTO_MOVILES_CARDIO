@@ -1,15 +1,10 @@
 # backend/pacientes/serializers.py
 from rest_framework import serializers
-from .models import Paciente, ControlCardiologico, HistorialClinico
+from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia
 
 
 class ControlCardiologicoSerializer(serializers.ModelSerializer):
-    archivo_adjunto = serializers.FileField(
-        use_url=True,
-        required=False,
-        allow_null=True,
-    )
-
+# ... (sin cambios)
     class Meta:
         model  = ControlCardiologico
         fields = [
@@ -34,6 +29,7 @@ class ControlCardiologicoSerializer(serializers.ModelSerializer):
 
 
 class HistorialClinicoSerializer(serializers.ModelSerializer):
+# ... (sin cambios)
     class Meta:
         model = HistorialClinico
         fields = [
@@ -55,11 +51,57 @@ class HistorialClinicoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'paciente', 'doctor', 'activo', 'created_at', 'updated_at']
 
 
+class SeguimientoArritmiaSerializer(serializers.ModelSerializer):
+    registrado_por_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SeguimientoArritmia
+        fields = [
+            'id',
+            'arritmia',
+            'fecha_control',
+            'frecuencia_cardiaca',
+            'nivel_riesgo',
+            'estado',
+            'observaciones',
+            'registrado_por',
+            'registrado_por_nombre',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'registrado_por', 'created_at']
+
+    def get_registrado_por_nombre(self, obj):
+        if obj.registrado_por and hasattr(obj.registrado_por, 'perfil'):
+            return f"{obj.registrado_por.perfil.nombre} {obj.registrado_por.perfil.apellido}".strip()
+        return obj.registrado_por.email if obj.registrado_por else "N/A"
+
+
+class ArritmiaSerializer(serializers.ModelSerializer):
+    seguimientos = SeguimientoArritmiaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Arritmia
+        fields = [
+            'id',
+            'paciente',
+            'doctor',
+            'tipo_arritmia',
+            'fecha_deteccion',
+            'nivel_riesgo',
+            'estado',
+            'observaciones',
+            'seguimientos',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'paciente', 'doctor', 'created_at']
+
+
 class PacienteSerializer(serializers.ModelSerializer):
     nombre = serializers.SerializerMethodField()
     email  = serializers.CharField(source='usuario.email', read_only=True)
     historial_controles = serializers.SerializerMethodField()
     historiales_clinicos = serializers.SerializerMethodField()
+    arritmias = serializers.SerializerMethodField()
 
     # NUEVO: campo de foto con URL absoluta
     foto = serializers.ImageField(use_url=True, required=False, allow_null=True)
@@ -79,7 +121,8 @@ class PacienteSerializer(serializers.ModelSerializer):
             'fecha_registro',
             'historial_controles',
             'historiales_clinicos',
-            'foto',   # ← nuevo campo
+            'arritmias',
+            'foto',
         ]
 
     def get_nombre(self, obj):
@@ -90,17 +133,16 @@ class PacienteSerializer(serializers.ModelSerializer):
             return obj.usuario.email
 
     def get_historial_controles(self, obj):
-        controles = obj.historial_controles.all()
-        return ControlCardiologicoSerializer(
-            controles,
-            many=True,
-            context=self.context,
-        ).data
+        # Usamos el related_name definido en el modelo
+        controles = obj.historial_controles.all().order_by('-fecha')
+        return ControlCardiologicoSerializer(controles, many=True, context=self.context).data
 
     def get_historiales_clinicos(self, obj):
-        historiales = obj.historiales_clinicos.all()
-        return HistorialClinicoSerializer(
-            historiales,
-            many=True,
-            context=self.context,
-        ).data
+        # Usamos el related_name definido en el modelo y filtramos activos
+        historiales = obj.historiales_clinicos.filter(activo=True).order_by('-fecha_registro')
+        return HistorialClinicoSerializer(historiales, many=True, context=self.context).data
+
+    def get_arritmias(self, obj):
+        # Usamos el related_name definido en el modelo
+        arritmias = obj.arritmias.all().order_by('-fecha_deteccion')
+        return ArritmiaSerializer(arritmias, many=True, context=self.context).data

@@ -55,6 +55,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "4. Seguimiento de Arritmias",
+              svgSrc: "assets/icons/media.svg",
+              press: () {
+                menuController.setSelectedPage("seguimiento_arritmias");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mi Asistente IA",
