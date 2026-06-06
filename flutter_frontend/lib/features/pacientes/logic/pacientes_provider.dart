@@ -16,7 +16,7 @@ class PacientesProvider with ChangeNotifier {
   bool                get isLoading   => _isLoading;
   String?             get ultimoError => _ultimoError;
 
-  final String baseUrl = 'http://localhost:8000/api/pacientes';
+  final String baseUrl = 'http://127.0.0.1:8000/api/pacientes';
 
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',

@@ -149,20 +149,94 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
                 "Fecha: ${control.fecha}",
                 style: const TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
               ),
-              Text(
-                "Ritmo: ${control.frecuenciaCardiaca} BPM",
-                style: const TextStyle(color: Colors.white70),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  control.diagnosticoEcg,
+                  style: const TextStyle(fontSize: 11, color: primaryColor),
+                ),
               ),
             ],
           ),
           const Divider(color: Colors.white10),
-          Text("Presión: ${control.presionSistolica}/${control.presionDiastolica} mmHg"),
-          Text("Saturación O2: ${control.saturacionOxigeno}%"),
-          const SizedBox(height: 5),
-          Text("Diagnóstico ECG: ${control.diagnosticoEcg}", 
-            style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.white54)),
+          Row(
+            children: [
+              _buildMetric("Presión", "${control.presionSistolica}/${control.presionDiastolica}", Icons.speed),
+              const SizedBox(width: 20),
+              _buildMetric("Ritmo", "${control.frecuenciaCardiaca} BPM", Icons.favorite),
+              const SizedBox(width: 20),
+              _buildMetric("SatO2", "${control.saturacionOxigeno}%", Icons.air),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildInfoRow("Síntomas", control.sintomas),
+          if (control.dolorPecho || control.disnea || control.mareos || control.edema)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Wrap(
+                spacing: 5,
+                children: [
+                  if (control.dolorPecho) _buildBadge("Dolor Pecho"),
+                  if (control.disnea) _buildBadge("Disnea"),
+                  if (control.mareos) _buildBadge("Mareos"),
+                  if (control.edema) _buildBadge("Edema"),
+                ],
+              ),
+            ),
+          const SizedBox(height: 10),
+          _buildInfoRow("Evolución", control.evolucion),
+          _buildInfoRow("Plan", control.planMedicacion),
+          if (control.proximaCita != null)
+             _buildInfoRow("Próxima Cita", control.proximaCita!),
         ],
       ),
+    );
+  }
+
+  Widget _buildMetric(String label, String value, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: Colors.white54),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54)),
+          ],
+        ),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 12, color: Colors.white70),
+          children: [
+            TextSpan(text: "$label: ", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            TextSpan(text: value.isEmpty ? "N/A" : value),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.red.withOpacity(0.5)),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 9, color: Colors.redAccent)),
     );
   }
 

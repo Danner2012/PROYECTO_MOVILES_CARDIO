@@ -141,16 +141,20 @@ def registrar_paciente(request):
 import requests
 
 def sincronizar_con_ollama(paciente, control):
-    """Sincroniza el nuevo control con la base de datos de Ollama."""
+    """Sincroniza el nuevo control con la base de datos de Ollama incluyendo todos los datos clínicos."""
     url = "http://localhost:8001/records"
+    
+    # Formatear booleanos para que la IA los entienda mejor
+    def si_no(val): return "Sí" if val else "No"
+    
     payload = {
         "paciente": paciente.usuario.get_full_name() or paciente.usuario.username,
         "ritmo_cardiaco": control.frecuencia_cardiaca,
         "tipo_arritmia": control.diagnostico_ecg,
-        "sintomas": control.sintomas,
-        "diagnostico": control.evolucion,
-        "presion_arterial": f"{control.presion_sistolica}/{control.presion_diastolica}",
-        "observaciones": control.plan_medicacion
+        "sintomas": f"{control.sintomas}. Dolor pecho: {si_no(control.dolor_pecho)}, Disnea: {si_no(control.disnea)}, Mareos: {si_no(control.mareos)}, Edema: {si_no(control.edema)}",
+        "diagnostico": control.evolucion or "Sin evolución registrada",
+        "presion_arterial": f"{control.presion_sistolica}/{control.presion_diastolica} mmHg (SatO2: {control.saturacion_oxigeno}%)",
+        "observaciones": f"Plan: {control.plan_medicacion or 'N/A'}. Próxima cita: {control.proxima_cita or 'Sin definir'}"
     }
     try:
         requests.post(url, json=payload, timeout=5)
