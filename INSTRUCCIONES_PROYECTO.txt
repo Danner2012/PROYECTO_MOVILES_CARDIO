@@ -27,7 +27,7 @@ Antes de ejecutar el backend, debes preparar la base de datos:
    - DB_PASSWORD=tu_contraseña_de_postgres
    - DB_HOST=localhost
    - DB_PORT=5432
-
+ 
 3. CONFIGURACIÓN DE OLLAMA (IA)
 ------------------------------------------------------------
 Para que Ollama acepte conexiones desde el navegador y otros dispositivos:

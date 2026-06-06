@@ -69,7 +69,7 @@ class DashboardScreen extends StatelessWidget {
     if (rol == 'superadmin') title = "Panel de Control - SuperAdmin";
     if (rol == 'administrador') title = "Gestión del Sistema - Admin";
     if (rol == 'doctor') title = "Panel Médico - Especialista";
-    if (rol == 'paciente') title = "Mi Historial de Salud";
+    if (rol == 'paciente') title = "rial de Salud";
 
     return Container(
       alignment: Alignment.centerLeft,
