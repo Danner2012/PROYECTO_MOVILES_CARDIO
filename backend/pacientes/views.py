@@ -525,7 +525,25 @@ def obtener_mis_arritmias(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_mis_examenes(request):
+    if not es_paciente(request.user):
+        return Response({"error": "Solo para pacientes."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    examenes = paciente.examenes_medicos.all().order_by('-fecha_examen')
+    serializer = ExamenMedicoSerializer(examenes, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 # --- Gestión de Reportes PDF ---
+
 
 
 

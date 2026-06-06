@@ -15,6 +15,8 @@ class PacientesProvider with ChangeNotifier {
   List<PacienteModel> get pacientes    => _pacientes;
   PacienteModel?      get perfilPaciente => _perfilPaciente;
   List<ArritmiaModel> get misArritmias => _misArritmias;
+  List<ExamenMedicoModel> _misExamenes = [];
+  List<ExamenMedicoModel> get misExamenes => _misExamenes;
   bool                get isLoading   => _isLoading;
   String?             get ultimoError => _ultimoError;
 
@@ -60,6 +62,26 @@ class PacientesProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('fetchMisArritmias excepción: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchMisExamenes(String token) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/mis-examenes/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _misExamenes = data.map((j) => ExamenMedicoModel.fromJson(j)).toList();
+      }
+    } catch (e) {
+      debugPrint('fetchMisExamenes excepción: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

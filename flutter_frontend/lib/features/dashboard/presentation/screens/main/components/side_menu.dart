@@ -112,6 +112,17 @@ class SideMenu extends StatelessWidget {
             ),
           if (rol == 'paciente')
             DrawerListTile(
+              title: "Mis Exámenes",
+              svgSrc: "assets/icons/menu_doc.svg",
+              press: () {
+                menuController.setSelectedPage("mis_examenes");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          if (rol == 'paciente')
+            DrawerListTile(
               title: "Mi Asistente IA",
               svgSrc: "assets/icons/menu_task.svg",
               press: () {
