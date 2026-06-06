@@ -36,4 +36,7 @@ urlpatterns = [
 
     # Paciente: Mis Exámenes
     path('mis-examenes/', views.obtener_mis_examenes, name='mis_examenes'),
+
+    # Paciente: Mis Tratamientos
+    path('mis-tratamientos/', views.obtener_mis_tratamientos, name='mis_tratamientos'),
 ]

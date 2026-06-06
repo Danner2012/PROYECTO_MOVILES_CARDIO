@@ -542,7 +542,30 @@ def obtener_mis_examenes(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_mis_tratamientos(request):
+    if not es_paciente(request.user):
+        return Response({"error": "Solo para pacientes."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Obtenemos tratamientos con prefetch_related para eficiencia
+    tratamientos = (
+        paciente.tratamientos.all()
+        .prefetch_related('medicamentos', 'recomendaciones')
+        .order_by('-fecha_inicio')
+    )
+    serializer = TratamientoSerializer(tratamientos, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 # --- Gestión de Reportes PDF ---
+
 
 
 
