@@ -31,7 +31,7 @@ def delete_cardio_record(db: Session, record_id: int):
         return db_record
 
 # Función para buscar registros basados en palabras clave de la pregunta
-def search_cardio_records(db: Session, query: str):
+def search_cardio_records(db: Session, query: str, patient_name: str = None):
     # Limpiar la pregunta: quitar signos de interrogación y pasar a minúsculas
     clean_query = query.replace("?", "").replace("¿", "").lower()
     words = clean_query.split()
@@ -48,10 +48,24 @@ def search_cardio_records(db: Session, query: str):
     conditions = []
     for word in keywords:
         search_term = f"%{word}%"
-        conditions.append(models.CardioRecord.paciente.ilike(search_term))
         conditions.append(models.CardioRecord.tipo_arritmia.ilike(search_term))
         conditions.append(models.CardioRecord.diagnostico.ilike(search_term))
         conditions.append(models.CardioRecord.sintomas.ilike(search_term))
 
-    from sqlalchemy import or_
-    return db.query(models.CardioRecord).filter(or_(*conditions)).limit(5).all()
+    from sqlalchemy import or_, and_
+    
+    query_obj = db.query(models.CardioRecord)
+    
+    if patient_name:
+        # Si hay un nombre de paciente, filtramos estrictamente por ese paciente
+        query_obj = query_obj.filter(models.CardioRecord.paciente.ilike(f"%{patient_name}%"))
+        # Si se especificó el paciente, las palabras clave son un filtro adicional
+        if conditions:
+            query_obj = query_obj.filter(or_(*conditions))
+    else:
+        # Si no hay paciente (Admin), buscamos en todos los campos incluyendo el nombre del paciente
+        for word in keywords:
+            conditions.append(models.CardioRecord.paciente.ilike(f"%{word}%"))
+        query_obj = query_obj.filter(or_(*conditions))
+
+    return query_obj.limit(5).all()

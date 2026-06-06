@@ -6,6 +6,7 @@ import 'package:flutter_frontend/features/dashboard/presentation/screens/doctors
 import 'package:flutter_frontend/features/dashboard/presentation/screens/ia_prediction/ia_prediction_screen.dart';
 import 'package:flutter_frontend/features/ollama/presentation/screens/ollama/ollama_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/pacientes_screen.dart'; 
+import 'package:flutter_frontend/features/pacientes/presentation/screens/patient_ai_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'components/side_menu.dart';
@@ -50,6 +51,8 @@ class MainScreen extends StatelessWidget {
         return OllamaScreen();
       case "pacientes": 
         return const PacientesScreen();
+      case "patient_ai":
+        return const PatientAiScreen();
       default:
         return DashboardScreen();
     }

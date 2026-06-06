@@ -7,10 +7,12 @@ import '../data/paciente_model.dart';
 
 class PacientesProvider with ChangeNotifier {
   List<PacienteModel> _pacientes = [];
+  PacienteModel? _perfilPaciente;
   bool _isLoading = false;
   String? _ultimoError;
 
   List<PacienteModel> get pacientes    => _pacientes;
+  PacienteModel?      get perfilPaciente => _perfilPaciente;
   bool                get isLoading   => _isLoading;
   String?             get ultimoError => _ultimoError;
 
@@ -20,6 +22,27 @@ class PacientesProvider with ChangeNotifier {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
   };
+
+  // ── Obtener mis controles (Pacientes) ──────────────────────────────────
+  Future<void> fetchMisControles(String token) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/mis-controles/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        _perfilPaciente = PacienteModel.fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('fetchMisControles excepción: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   // ── Listar pacientes ──────────────────────────────────────────────────────
   Future<void> cargarPacientes(String token) async {

@@ -26,6 +26,7 @@ class CardioResponse(CardioBase):
 
 class ChatRequest(BaseModel):
     question: str
+    patient_name: Optional[str] = None
 
 class ChatResponse(BaseModel):
     answer: str

@@ -19,6 +19,35 @@ def es_doctor(usuario):
         return False
 
 
+def es_paciente(usuario):
+    try:
+        return str(usuario.rol).lower() == 'paciente'
+    except Exception:
+        return False
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_mis_controles(request):
+    if not es_paciente(request.user):
+        return Response(
+            {"error": "Esta vista es solo para pacientes."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        paciente = Paciente.objects.get(usuario=request.user)
+    except Paciente.DoesNotExist:
+        return Response(
+            {"error": "No tienes un perfil de paciente creado todavía."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    serializer = PacienteSerializer(paciente, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -109,6 +138,26 @@ def registrar_paciente(request):
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+import requests
+
+def sincronizar_con_ollama(paciente, control):
+    """Sincroniza el nuevo control con la base de datos de Ollama."""
+    url = "http://localhost:8001/records"
+    payload = {
+        "paciente": paciente.usuario.get_full_name() or paciente.usuario.username,
+        "ritmo_cardiaco": control.frecuencia_cardiaca,
+        "tipo_arritmia": control.diagnostico_ecg,
+        "sintomas": control.sintomas,
+        "diagnostico": control.evolucion,
+        "presion_arterial": f"{control.presion_sistolica}/{control.presion_diastolica}",
+        "observaciones": control.plan_medicacion
+    }
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Error sincronizando con Ollama: {e}")
+
+
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -134,6 +183,10 @@ def agregar_control(request, paciente_id):
     )
     if serializer.is_valid():
         instancia = serializer.save(paciente=paciente)
+        
+        # Sincronizar con la IA
+        sincronizar_con_ollama(paciente, instancia)
+
         respuesta = ControlCardiologicoSerializer(
             instancia,
             context={'request': request},
