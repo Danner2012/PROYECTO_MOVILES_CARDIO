@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.db import connections # <--- Importante para la base de datos secundaria
 from .models import Paciente
 from .serializers import PacienteSerializer, ControlCardiologicoSerializer
 
@@ -127,3 +128,62 @@ def agregar_control(request, paciente_id):
         serializer.save(paciente=paciente)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# =========================================================================
+# ENDPOINT ADAPTADO A LAS COLUMNAS REALES DE REGISTROS_ECG
+# =========================================================================
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_metricas_ecg(request):
+    """
+    Extrae el historial de telemetría directamente desde las columnas reales
+    de 'registros_ecg' en 'ecg_db'.
+    """
+    try:
+        with connections['ecg_db'].cursor() as cursor:
+            # Consultamos las columnas reales según tu esquema de pgAdmin
+            query = """
+                SELECT 
+                    id, 
+                    bpm, 
+                    bpm_average, 
+                    hrv, 
+                    beat_detected, 
+                    electrodes_connected, 
+                    created_at 
+                FROM registros_ecg 
+                ORDER BY id DESC 
+                LIMIT 50;
+            """
+            cursor.execute(query)
+            
+            columnas = [col[0] for col in cursor.description]
+            resultados = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+        datos_formateados = []
+        for registro in resultados:
+            dt = registro.get("created_at")
+            # Extraemos fecha y hora del timestamp con zona horaria (created_at)
+            fecha_str = dt.strftime("%d/%m/%Y") if hasattr(dt, "strftime") else str(dt or "")
+            hora_str = dt.strftime("%H:%M:%S") if hasattr(dt, "strftime") else str(dt or "")
+            
+            datos_formateados.append({
+                "id": str(registro.get("id", "")),
+                "fecha": fecha_str,
+                "hora": hora_str,
+                "bpm": str(registro.get("bpm", "0")),
+                "bpm_average": str(registro.get("bpm_average", "0")),
+                "hrv": str(registro.get("hrv", "0")),
+                "beat_detected": "Sí" if registro.get("beat_detected") is True else "No",
+                "electrodes_connected": "Conectado" if registro.get("electrodes_connected") is True else "Desconectado",
+                "estado": "Normal" if float(registro.get("bpm", 0)) <= 100 else "Taquicardia"
+            })
+
+        return Response(datos_formateados, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": f"Error en la consulta de registros_ecg: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
