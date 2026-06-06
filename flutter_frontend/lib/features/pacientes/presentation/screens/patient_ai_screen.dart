@@ -131,112 +131,290 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
   }
 
   Widget _buildControlCard(ControlCardioModel control) {
+    // URL base del servidor para las imágenes
+    const String serverUrl = "http://127.0.0.1:8000";
+    String? imageUrl;
+    if (control.archivoAdjunto != null) {
+      imageUrl = control.archivoAdjunto!.startsWith('http') 
+          ? control.archivoAdjunto 
+          : serverUrl + control.archivoAdjunto!;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: defaultPadding),
-      padding: const EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            secondaryColor,
+            secondaryColor.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: Border.all(color: primaryColor.withOpacity(0.1)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Fecha: ${control.fecha}",
-                style: const TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(
-                  control.diagnosticoEcg,
-                  style: const TextStyle(fontSize: 11, color: primaryColor),
-                ),
-              ),
-            ],
-          ),
-          const Divider(color: Colors.white10),
-          Row(
-            children: [
-              _buildMetric("Presión", "${control.presionSistolica}/${control.presionDiastolica}", Icons.speed),
-              const SizedBox(width: 20),
-              _buildMetric("Ritmo", "${control.frecuenciaCardiaca} BPM", Icons.favorite),
-              const SizedBox(width: 20),
-              _buildMetric("SatO2", "${control.saturacionOxigeno}%", Icons.air),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildInfoRow("Síntomas", control.sintomas),
-          if (control.dolorPecho || control.disnea || control.mareos || control.edema)
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Wrap(
-                spacing: 5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabecera de la tarjeta con color distintivo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: defaultPadding, vertical: 8),
+              color: primaryColor.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (control.dolorPecho) _buildBadge("Dolor Pecho"),
-                  if (control.disnea) _buildBadge("Disnea"),
-                  if (control.mareos) _buildBadge("Mareos"),
-                  if (control.edema) _buildBadge("Edema"),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 14, color: primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        control.fecha,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  _buildStatusChip(control.diagnosticoEcg),
                 ],
               ),
             ),
-          const SizedBox(height: 10),
-          _buildInfoRow("Evolución", control.evolucion),
-          _buildInfoRow("Plan", control.planMedicacion),
-          if (control.proximaCita != null)
-             _buildInfoRow("Próxima Cita", control.proximaCita!),
+            
+            Padding(
+              padding: const EdgeInsets.all(defaultPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Métricas principales con diseño de rejilla
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildMetricBox("Presión", "${control.presionSistolica}/${control.presionDiastolica}", "mmHg", Icons.speed, Colors.orangeAccent),
+                      _buildMetricBox("Ritmo", "${control.frecuenciaCardiaca}", "BPM", Icons.favorite, Colors.redAccent),
+                      _buildMetricBox("SatO2", "${control.saturacionOxigeno}", "%", Icons.air, Colors.cyanAccent),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Síntomas con badges
+                  const Text("SÍNTOMAS Y ALERTAS", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 1.2)),
+                  const SizedBox(height: 8),
+                  Text(control.sintomas, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                  
+                  if (control.dolorPecho || control.disnea || control.mareos || control.edema)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (control.dolorPecho) _buildModernBadge("DOLOR PECHO", Icons.warning_amber_rounded, Colors.red),
+                          if (control.disnea) _buildModernBadge("DISNEA", Icons.air, Colors.orange),
+                          if (control.mareos) _buildModernBadge("MAREOS", Icons.moped_rounded, Colors.amber),
+                          if (control.edema) _buildModernBadge("EDEMA", Icons.water_drop, Colors.blue),
+                        ],
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 15),
+                  const Divider(color: Colors.white10),
+                  const SizedBox(height: 10),
+                  
+                  // Evolución y Plan
+                  _buildDetailSection("Evolución Clínica", control.evolucion, Icons.notes_rounded),
+                  const SizedBox(height: 10),
+                  _buildDetailSection("Plan y Medicación", control.planMedicacion, Icons.medical_services_outlined),
+                  
+                  if (control.proximaCita != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: primaryColor.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.event, size: 16, color: primaryColor),
+                            const SizedBox(width: 10),
+                            const Text("Próxima Cita: ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text(control.proximaCita!, style: const TextStyle(fontSize: 12, color: primaryColor)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  
+                  // IMAGEN ADJUNTA (ECG / ESTUDIO)
+                  if (imageUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("ESTUDIO ADJUNTO", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 1.2)),
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: () => _showImageDialog(context, imageUrl!),
+                            child: Container(
+                              height: 150,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white10),
+                                image: DecorationImage(
+                                  image: NetworkImage(imageUrl),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
+                                  ),
+                                ),
+                                alignment: Alignment.bottomCenter,
+                                padding: const EdgeInsets.all(8),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                                    SizedBox(width: 5),
+                                    Text("Ver estudio completo", style: TextStyle(color: Colors.white, fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryColor.withOpacity(0.5)),
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryColor),
+      ),
+    );
+  }
+
+  Widget _buildMetricBox(String label, String value, String unit, IconData icon, Color color) {
+    return Container(
+      width: 90,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bgColor.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(unit, style: TextStyle(fontSize: 9, color: Colors.white.withOpacity(0.5))),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white38)),
         ],
       ),
     );
   }
 
-  Widget _buildMetric(String label, String value, IconData icon) {
+  Widget _buildModernBadge(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(String title, String content, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 12, color: Colors.white54),
-            const SizedBox(width: 4),
-            Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54)),
+            Icon(icon, size: 14, color: primaryColor.withOpacity(0.7)),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white54)),
           ],
         ),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 5),
+        Padding(
+          padding: const EdgeInsets.only(left: 22),
+          child: Text(
+            content.isEmpty ? "No se registraron detalles adicionales." : content,
+            style: const TextStyle(fontSize: 13, color: Colors.white70),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 12, color: Colors.white70),
+  void _showImageDialog(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.topRight,
           children: [
-            TextSpan(text: "$label: ", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-            TextSpan(text: value.isEmpty ? "N/A" : value),
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(url, fit: BoxFit.contain),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              onPressed: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBadge(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.red.withOpacity(0.5)),
-      ),
-      child: Text(label, style: const TextStyle(fontSize: 9, color: Colors.redAccent)),
     );
   }
 
