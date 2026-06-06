@@ -83,6 +83,7 @@ class HistorialClinico(models.Model):
     alergias = models.TextField(blank=True, null=True)
     observaciones_medicas = models.TextField(blank=True, null=True)
     estado_actual = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

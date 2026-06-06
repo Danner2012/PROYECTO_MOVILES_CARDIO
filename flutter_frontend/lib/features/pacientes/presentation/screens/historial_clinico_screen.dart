@@ -149,7 +149,13 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (build method remains mostly the same, but using _isSaving if needed)
+    final prov = Provider.of<PacientesProvider>(context);
+    // Buscar el paciente actualizado en la lista del provider
+    final pacienteActual = prov.pacientes.firstWhere(
+      (p) => p.id == widget.paciente.id, 
+      orElse: () => widget.paciente
+    );
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       padding: const EdgeInsets.all(20),
@@ -160,7 +166,7 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Historial de ${widget.paciente.nombre}',
+                'Historial de ${pacienteActual.nombre}',
                 style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
               IconButton(
@@ -171,13 +177,20 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
           ),
           const Divider(color: Colors.white10),
           Expanded(
-            child: widget.paciente.historialesClinicos.isEmpty
+            child: pacienteActual.historialesClinicos.isEmpty
                 ? const Center(child: Text('No hay registros de historial.', style: TextStyle(color: Colors.white38)))
                 : ListView.builder(
-                    itemCount: widget.paciente.historialesClinicos.length,
+                    itemCount: pacienteActual.historialesClinicos.length,
                     itemBuilder: (context, i) {
-                      final h = widget.paciente.historialesClinicos[i];
-                      return _HistorialItem(historial: h, pacienteId: widget.paciente.id);
+                      final h = pacienteActual.historialesClinicos[i];
+                      return _HistorialItem(
+                        historial: h, 
+                        pacienteId: pacienteActual.id,
+                        onEdit: (model) => _mostrarFormularioHistorial(context, historial: model),
+                        onDelete: () {
+                          // El provider ya refresca la lista al eliminar
+                        },
+                      );
                     },
                   ),
           ),
@@ -327,7 +340,15 @@ class _DetalleHistorialSheetState extends State<_DetalleHistorialSheet> {
 class _HistorialItem extends StatelessWidget {
   final HistorialClinicoModel historial;
   final int pacienteId;
-  const _HistorialItem({required this.historial, required this.pacienteId});
+  final Function(HistorialClinicoModel) onEdit;
+  final VoidCallback onDelete;
+
+  const _HistorialItem({
+    required this.historial,
+    required this.pacienteId,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -352,11 +373,13 @@ class _HistorialItem extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.white38, size: 18),
-                    onPressed: () => _editar(context),
+                    tooltip: 'Editar',
+                    onPressed: () => onEdit(historial),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18),
-                    onPressed: () => _confirmarEliminar(context),
+                    icon: const Icon(Icons.block, color: Colors.redAccent, size: 18),
+                    tooltip: 'Desactivar',
+                    onPressed: () => _confirmarDesactivar(context),
                   ),
                 ],
               ),
@@ -399,18 +422,13 @@ class _HistorialItem extends StatelessWidget {
     return Colors.white54;
   }
 
-  void _editar(BuildContext context) {
-    // Reutiliza la lógica del padre mediante callbacks o simplemente subiendo el estado
-    // Por simplicidad en este script, podrías llamar a una función del sheet padre si fuera necesario.
-  }
-
-  void _confirmarEliminar(BuildContext context) {
+  void _confirmarDesactivar(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF161B22),
-        title: const Text('¿Eliminar registro?', style: TextStyle(color: Colors.white)),
-        content: const Text('Esta acción no se puede deshacer.', style: TextStyle(color: Colors.white54)),
+        title: const Text('¿Desactivar registro?', style: TextStyle(color: Colors.white)),
+        content: const Text('El registro dejará de ser visible en el historial clínico pero permanecerá en el sistema.', style: TextStyle(color: Colors.white54)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
           TextButton(
@@ -420,10 +438,10 @@ class _HistorialItem extends StatelessWidget {
               final ok = await pacProv.eliminarHistorialClinico(token: authProv.token!, historialId: historial.id);
               if (ok && context.mounted) {
                 Navigator.pop(context); // Cerrar dialogo
-                Navigator.pop(context); // Cerrar sheet para refrescar
+                onDelete(); // Notificar al padre para refrescar
               }
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Desactivar', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),

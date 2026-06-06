@@ -74,6 +74,7 @@ class HistorialClinicoModel {
   final String? alergias;
   final String? observacionesMedicas;
   final String estadoActual;
+  final bool activo;
   final String createdAt;
   final String updatedAt;
 
@@ -89,6 +90,7 @@ class HistorialClinicoModel {
     this.alergias,
     this.observacionesMedicas,
     required this.estadoActual,
+    required this.activo,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -106,6 +108,7 @@ class HistorialClinicoModel {
       alergias: json['alergias'],
       observacionesMedicas: json['observaciones_medicas'],
       estadoActual: json['estado_actual'] ?? '',
+      activo: json['activo'] ?? true,
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
     );

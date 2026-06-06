@@ -48,10 +48,11 @@ class HistorialClinicoSerializer(serializers.ModelSerializer):
             'alergias',
             'observaciones_medicas',
             'estado_actual',
+            'activo',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'paciente', 'doctor', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'paciente', 'doctor', 'activo', 'created_at', 'updated_at']
 
 
 class PacienteSerializer(serializers.ModelSerializer):

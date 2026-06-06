@@ -41,11 +41,12 @@ def gestionar_historial_paciente(request, paciente_id):
         return Response({"error": "Paciente no encontrado o no pertenece a tu lista."}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        historiales = paciente.historiales_clinicos.all()
+        historiales = paciente.historiales_clinicos.filter(activo=True)
         serializer = HistorialClinicoSerializer(historiales, many=True)
         return Response(serializer.data)
 
     elif request.method == 'POST':
+        # ... (rest of method unchanged)
         serializer = HistorialClinicoSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(paciente=paciente, doctor=request.user)
@@ -77,8 +78,9 @@ def detalle_historial_clinico(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
-        historial.delete()
-        return Response({"mensaje": "Registro eliminado correctamente."}, status=status.HTTP_204_NO_CONTENT)
+        historial.activo = False
+        historial.save()
+        return Response({"mensaje": "Registro desactivado correctamente."}, status=status.HTTP_200_OK)
 
 
 # --- Vistas Existentes ---
