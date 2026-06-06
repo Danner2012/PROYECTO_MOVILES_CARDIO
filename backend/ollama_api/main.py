@@ -36,32 +36,46 @@ async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get
 
     if request.patient_name:
         system_prompt = (
-            "Eres un asistente educativo de salud para el sistema Cardio-Project. "
-            f"Estás ayudando al paciente {request.patient_name} a entender su salud cardiovascular. "
-            "TU TAREA es explicar los resultados médicos de forma sencilla, tranquilizadora y educativa. "
-            "REGLAS CRÍTICAS:\n"
-            "1. Usa un lenguaje que un paciente sin conocimientos médicos pueda entender.\n"
-            "2. Responde basándote exclusivamente en los datos del paciente que te proporciono.\n"
-            "3. No des diagnósticos médicos definitivos, siempre sugiere consultar con su doctor.\n"
-            "4. Sé muy amable y responde solo sobre cardiología."
+            "Eres el asistente personal de salud de Cardio-Project. "
+            f"Estás hablando directamente con el paciente {request.patient_name}. "
+            "TU TAREA es explicarle SUS resultados médicos de forma directa, amable y MUY ESTRUCTURADA. "
+            "REGLAS CRÍTICAS DE COMUNICACIÓN:\n"
+            "1. HABLA EN SEGUNDA PERSONA: Dirígete al usuario como 'tú'. Usa frases como 'Tus registros muestran...', 'Tu presión está...', 'Tus síntomas registrados son...'.\n"
+            "2. NUNCA hables en tercera persona (evita decir 'En el caso de...' o 'La paciente tiene...'). Habla como si estuvieras viendo su expediente con él/ella.\n"
+            "3. Usa Markdown: Negritas (**), listas (-) y saltos de línea.\n"
+            "4. DATOS REALES: Usa los datos de 'TUS DATOS MÉDICOS' con precisión. Si el dato existe, dalo directamente.\n"
+            "5. SEGURIDAD: No des diagnósticos definitivos, sugiere siempre hablar con su médico de cabecera.\n"
+            "6. Sé muy empático y educado."
         )
     else:
         system_prompt = (
             "Eres un asistente médico experto en cardiología del sistema Cardio-Project. "
             "TU TAREA es responder de forma inteligente basándote en el contexto proporcionado. "
             "REGLAS CRÍTICAS:\n"
-            "1. Si el usuario hace una PREGUNTA GENERAL (ej. '¿Qué es la taquicardia?'), responde de forma educativa y profesional SIN mencionar datos de pacientes específicos de la base de datos, a menos que el usuario lo pida.\n"
-            "2. Si el usuario pregunta por DATOS REALES o REGISTROS (ej. '¿Qué pacientes tienen arritmia?'), utiliza la información de la BASE DE DATOS que te proporciono.\n"
-            "3. Solo puedes responder sobre cardiología o el sistema Cardio-Project. Para otros temas, di: 'Lo siento, solo puedo ayudarte con temas relacionados con el corazón o el sistema Cardio-Project'.\n"
-            "4. Sé conciso y preciso."
+            "1. Usa Markdown profesional: Negritas para términos clave y listas para enumerar hallazgos.\n"
+            "2. Si el usuario hace una PREGUNTA GENERAL, responde de forma educativa.\n"
+            "3. Si el usuario pregunta por DATOS REALES o REGISTROS, utiliza la información de la BASE DE DATOS con precisión.\n"
+            "4. Sé conciso y técnico pero accesible."
         )
 
     context = ""
     if matched_records:
-        header = "TUS DATOS MÉDICOS:" if request.patient_name else "DATOS DE LA BASE DE DATOS:"
+        header = f"--- DATOS REALES DE {request.patient_name.upper()} ---" if request.patient_name else "--- REGISTROS DE LA BASE DE DATOS ---"
         context += f"{header}\n"
         for r in matched_records:
-            context += f"- FECHA: {r.fecha_registro.strftime('%d/%m/%Y')}, RITMO: {r.ritmo_cardiaco} BPM, ARRITMIA: {r.tipo_arritmia}, DIAGNÓSTICO: {r.diagnostico}, SÍNTOMAS: {r.sintomas}, PRESIÓN: {r.presion_arterial}\n"
+            context += (
+                f"- FECHA DEL REGISTRO: {r.fecha_registro.strftime('%d/%m/%Y')}\n"
+                f"  * Ritmo Cardíaco: {r.ritmo_cardiaco} pulsaciones por minuto (BPM)\n"
+                f"  * Presión Arterial: {r.presion_arterial}\n"
+                f"  * Tipo de Arritmia/ECG: {r.tipo_arritmia}\n"
+                f"  * Diagnóstico del Doctor: {r.diagnostico}\n"
+                f"  * Síntomas Reportados: {r.sintomas}\n"
+                f"  * Observaciones/Plan: {r.observaciones}\n"
+                "-------------------------------------------\n"
+            )
+    else:
+        if request.patient_name:
+            context += f"AVISO: No se encontraron registros específicos para la pregunta de {request.patient_name}. Responde de forma general y educativa.\n"
     
     context += f"\nPREGUNTA DEL USUARIO: {request.question}\n"
     context += "\nResponde siguiendo las reglas del sistema."

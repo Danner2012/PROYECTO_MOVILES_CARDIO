@@ -40,32 +40,56 @@ def search_cardio_records(db: Session, query: str, patient_name: str = None):
     stop_words = ["quien", "es", "que", "dime", "sobre", "el", "la", "los", "las", "un", "una", "de", "del", "paciente", "diagnostico", "tiene"]
     keywords = [w for w in words if w not in stop_words and len(w) > 2]
 
+    from sqlalchemy import or_, and_, desc
+
+    if patient_name:
+        # ESTRATEGIA PARA PACIENTE: Siempre traer sus últimos 3 registros como base
+        # más cualquier otro registro que coincida con las palabras clave.
+        
+        # 1. Obtener los 3 más recientes
+        latest_records = db.query(models.CardioRecord).filter(
+            models.CardioRecord.paciente.ilike(f"%{patient_name}%")
+        ).order_by(desc(models.CardioRecord.fecha_registro)).limit(3).all()
+        
+        # 2. Si hay palabras clave, buscar coincidencias específicas
+        keyword_records = []
+        if keywords:
+            conditions = []
+            for word in keywords:
+                search_term = f"%{word}%"
+                conditions.append(models.CardioRecord.tipo_arritmia.ilike(search_term))
+                conditions.append(models.CardioRecord.diagnostico.ilike(search_term))
+                conditions.append(models.CardioRecord.sintomas.ilike(search_term))
+                conditions.append(models.CardioRecord.presion_arterial.ilike(search_term))
+            
+            keyword_records = db.query(models.CardioRecord).filter(
+                and_(
+                    models.CardioRecord.paciente.ilike(f"%{patient_name}%"),
+                    or_(*conditions)
+                )
+            ).limit(5).all()
+        
+        # Combinar y eliminar duplicados manteniendo el orden
+        seen_ids = set()
+        final_records = []
+        for r in (latest_records + keyword_records):
+            if r.id not in seen_ids:
+                final_records.append(r)
+                seen_ids.add(r.id)
+        
+        return final_records[:5]
+
+    # ESTRATEGIA PARA ADMIN: Búsqueda tradicional por palabras clave
     if not keywords:
-        # Si no hay palabras clave, intentamos buscar con la pregunta original (limitada)
         keywords = [clean_query]
 
-    # Construir el filtro: que cualquiera de las palabras clave coincida con algún campo
     conditions = []
     for word in keywords:
         search_term = f"%{word}%"
+        conditions.append(models.CardioRecord.paciente.ilike(search_term))
         conditions.append(models.CardioRecord.tipo_arritmia.ilike(search_term))
         conditions.append(models.CardioRecord.diagnostico.ilike(search_term))
         conditions.append(models.CardioRecord.sintomas.ilike(search_term))
+        conditions.append(models.CardioRecord.presion_arterial.ilike(search_term))
 
-    from sqlalchemy import or_, and_
-    
-    query_obj = db.query(models.CardioRecord)
-    
-    if patient_name:
-        # Si hay un nombre de paciente, filtramos estrictamente por ese paciente
-        query_obj = query_obj.filter(models.CardioRecord.paciente.ilike(f"%{patient_name}%"))
-        # Si se especificó el paciente, las palabras clave son un filtro adicional
-        if conditions:
-            query_obj = query_obj.filter(or_(*conditions))
-    else:
-        # Si no hay paciente (Admin), buscamos en todos los campos incluyendo el nombre del paciente
-        for word in keywords:
-            conditions.append(models.CardioRecord.paciente.ilike(f"%{word}%"))
-        query_obj = query_obj.filter(or_(*conditions))
-
-    return query_obj.limit(5).all()
+    return db.query(models.CardioRecord).filter(or_(*conditions)).limit(5).all()

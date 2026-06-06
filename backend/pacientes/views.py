@@ -144,11 +144,18 @@ def sincronizar_con_ollama(paciente, control):
     """Sincroniza el nuevo control con la base de datos de Ollama incluyendo todos los datos clínicos."""
     url = "http://localhost:8001/records"
     
+    # Obtener nombre del perfil
+    try:
+        perfil = paciente.usuario.perfil
+        nombre_paciente = f"{perfil.nombre} {perfil.apellido}".strip()
+    except Exception:
+        nombre_paciente = paciente.usuario.email
+
     # Formatear booleanos para que la IA los entienda mejor
     def si_no(val): return "Sí" if val else "No"
     
     payload = {
-        "paciente": paciente.usuario.get_full_name() or paciente.usuario.username,
+        "paciente": nombre_paciente,
         "ritmo_cardiaco": control.frecuencia_cardiaca,
         "tipo_arritmia": control.diagnostico_ecg,
         "sintomas": f"{control.sintomas}. Dolor pecho: {si_no(control.dolor_pecho)}, Disnea: {si_no(control.disnea)}, Mareos: {si_no(control.mareos)}, Edema: {si_no(control.edema)}",

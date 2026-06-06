@@ -501,13 +501,26 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
           color: isUser ? primaryColor : primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(15),
+            topRight: const Radius.circular(15),
+            bottomLeft: Radius.circular(isUser ? 15 : 0),
+            bottomRight: Radius.circular(isUser ? 0 : 15),
+          ),
           border: isUser ? null : Border.all(color: primaryColor.withOpacity(0.3)),
         ),
-        child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        child: SelectableText(
+          text,
+          style: const TextStyle(
+            color: Colors.white, 
+            fontSize: 13,
+            height: 1.4, // Mejor espaciado entre líneas
+          ),
+        ),
       ),
     );
   }
