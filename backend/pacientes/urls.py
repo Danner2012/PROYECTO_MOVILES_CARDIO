@@ -27,4 +27,7 @@ urlpatterns = [
 
     # Reportes PDF
     path('<int:paciente_id>/reporte-pdf/', views.descargar_reporte_paciente, name='descargar_reporte'),
+
+    # Resumen Dashboard Doctor
+    path('dashboard-doctor/', views.obtener_resumen_dashboard, name='dashboard_doctor'),
 ]

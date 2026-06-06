@@ -424,7 +424,92 @@ from django.contrib.auth import get_user_model
 
 # ... (otras vistas)
 
+from django.utils import timezone
+from datetime import timedelta
+
+# ... (vistas anteriores)
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_resumen_dashboard(request):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    hoy = timezone.now().date()
+    
+    # Total de pacientes
+    total_pacientes = Paciente.objects.filter(doctor=request.user).count()
+    
+    # Pacientes con arritmias activas (pacientes únicos)
+    pacientes_arritmias_activas = (
+        Arritmia.objects
+        .filter(doctor=request.user, estado='Activa')
+        .values('paciente')
+        .distinct()
+        .count()
+    )
+    
+    # Alertas recientes (Arritmias con riesgo Alto o Crítico en los últimos 7 días)
+    hace_una_semana = hoy - timedelta(days=7)
+    alertas_recientes_qs = (
+        Arritmia.objects
+        .filter(
+            doctor=request.user, 
+            nivel_riesgo__in=['Alto', 'Crítico'],
+            fecha_deteccion__gte=hace_una_semana
+        )
+        .select_related('paciente__usuario__perfil')
+        .order_by('-fecha_deteccion')[:5]
+    )
+    
+    alertas_data = []
+    for alerta in alertas_recientes_qs:
+        try:
+            nombre = f"{alerta.paciente.usuario.perfil.nombre} {alerta.paciente.usuario.perfil.apellido}"
+        except:
+            nombre = alerta.paciente.usuario.email
+            
+        alertas_data.append({
+            "id": alerta.id,
+            "paciente_nombre": nombre,
+            "tipo_arritmia": alerta.tipo_arritmia,
+            "nivel_riesgo": alerta.nivel_riesgo,
+            "fecha": alerta.fecha_deteccion,
+        })
+
+    # Próximas consultas (Controles con proxima_cita >= hoy)
+    proximas_consultas_qs = (
+        ControlCardiologico.objects
+        .filter(paciente__doctor=request.user, proxima_cita__gte=hoy)
+        .select_related('paciente__usuario__perfil')
+        .order_by('proxima_cita')[:5]
+    )
+    
+    consultas_data = []
+    for control in proximas_consultas_qs:
+        try:
+            nombre = f"{control.paciente.usuario.perfil.nombre} {control.paciente.usuario.perfil.apellido}"
+        except:
+            nombre = control.paciente.usuario.email
+            
+        consultas_data.append({
+            "paciente_nombre": nombre,
+            "fecha": control.proxima_cita,
+            "motivo": control.diagnostico_ecg,
+        })
+
+    return Response({
+        "total_pacientes": total_pacientes,
+        "arritmias_activas": pacientes_arritmias_activas,
+        "total_alertas_recientes": len(alertas_data),
+        "alertas_recientes": alertas_data,
+        "proximas_consultas": consultas_data,
+    })
+
+
 # --- Gestión de Reportes PDF ---
+
 
 @api_view(['GET'])
 @permission_classes([]) # Permitimos el acceso para validar el token manualmente

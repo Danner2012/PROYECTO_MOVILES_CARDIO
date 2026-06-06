@@ -9,6 +9,7 @@ import 'features/dashboard/logic/doctor_provider.dart';
 import 'features/ollama/logic/ollama_provider.dart';
 import 'features/pacientes/logic/pacientes_provider.dart'; // ¡Añadido!
 import 'features/pacientes/logic/patient_ollama_provider.dart';
+import 'features/dashboard/logic/dashboard_doctor_provider.dart';
 
 // --- Tus Pantallas ---
 import 'features/auth/presentation/screens/login_screen.dart';
@@ -29,6 +30,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => OllamaProvider()),
         ChangeNotifierProvider(create: (_) => PacientesProvider()), // ¡Provider integrado!
         ChangeNotifierProvider(create: (_) => PatientOllamaProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardDoctorProvider()),
       ],
       child: const MyApp(),
     ),

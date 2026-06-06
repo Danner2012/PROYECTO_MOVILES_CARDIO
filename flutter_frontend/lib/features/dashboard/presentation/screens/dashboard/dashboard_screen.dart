@@ -9,7 +9,30 @@ import 'components/header.dart';
 import 'components/recent_files.dart';
 import 'components/storage_details.dart';
 
-class DashboardScreen extends StatelessWidget {
+import 'package:flutter_frontend/features/dashboard/logic/dashboard_doctor_provider.dart';
+
+import 'components/my_files_doctor.dart';
+import 'components/recent_alerts.dart';
+import 'components/next_appointments.dart';
+
+class DashboardScreen extends StatefulWidget {
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.user?.rol.toLowerCase() == 'doctor') {
+        Provider.of<DashboardDoctorProvider>(context, listen: false)
+            .fetchDashboardData(authProvider.token!);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -36,15 +59,15 @@ class DashboardScreen extends StatelessWidget {
                       SizedBox(height: defaultPadding),
                       
                       // MyFiles: Visible para todos menos quizás pacientes (o personalizado)
-                      if (rol != 'paciente') MyFiles(),
+                      if (rol == 'doctor') MyFilesDoctor() else if (rol != 'paciente') MyFiles(),
                       if (rol != 'paciente') SizedBox(height: defaultPadding),
                       
                       // RecentFiles: Visible para todos
-                      RecentFiles(),
+                      if (rol == 'doctor') RecentAlerts() else RecentFiles(),
                       
                       if (Responsive.isMobile(context))
                         SizedBox(height: defaultPadding),
-                      if (Responsive.isMobile(context)) StorageDetails(),
+                      if (Responsive.isMobile(context)) (rol == 'doctor' ? NextAppointments() : StorageDetails()),
                     ],
                   ),
                 ),
@@ -54,7 +77,7 @@ class DashboardScreen extends StatelessWidget {
                 if (!Responsive.isMobile(context))
                   Expanded(
                     flex: 2,
-                    child: StorageDetails(),
+                    child: rol == 'doctor' ? NextAppointments() : StorageDetails(),
                   ),
               ],
             )
