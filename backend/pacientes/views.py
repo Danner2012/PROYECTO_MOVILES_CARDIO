@@ -58,7 +58,8 @@ def gestionar_examenes_paciente(request, paciente_id):
     elif request.method == 'POST':
         serializer = ExamenMedicoSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(paciente=paciente, doctor=request.user)
+            instancia = serializer.save(paciente=paciente, doctor=request.user)
+            sincronizar_con_ollama(paciente, 'examen', instancia)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -114,7 +115,8 @@ def gestionar_arritmias_paciente(request, paciente_id):
     elif request.method == 'POST':
         serializer = ArritmiaSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(paciente=paciente, doctor=request.user)
+            instancia = serializer.save(paciente=paciente, doctor=request.user)
+            sincronizar_con_ollama(paciente, 'arritmia', instancia)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -353,8 +355,10 @@ def registrar_paciente(request):
 
 import requests
 
-def sincronizar_con_ollama(paciente, control):
-    """Sincroniza el nuevo control con la base de datos de Ollama incluyendo todos los datos clínicos."""
+def sincronizar_con_ollama(paciente, tipo_evento, objeto):
+    """
+    Sincroniza eventos médicos con Ollama (Controles, Arritmias, Exámenes, Tratamientos).
+    """
     url = "http://localhost:8001/records"
     
     try:
@@ -363,21 +367,56 @@ def sincronizar_con_ollama(paciente, control):
     except Exception:
         nombre_paciente = paciente.usuario.email
 
-    def si_no(val): return "Sí" if val else "No"
-    
     payload = {
         "paciente": nombre_paciente,
-        "ritmo_cardiaco": control.frecuencia_cardiaca,
-        "tipo_arritmia": control.diagnostico_ecg,
-        "sintomas": f"{control.sintomas}. Dolor pecho: {si_no(control.dolor_pecho)}, Disnea: {si_no(control.disnea)}, Mareos: {si_no(control.mareos)}, Edema: {si_no(control.edema)}",
-        "diagnostico": control.evolucion or "Sin evolución registrada",
-        "presion_arterial": f"{control.presion_sistolica}/{control.presion_diastolica} mmHg (SatO2: {control.saturacion_oxigeno}%)",
-        "observaciones": f"Plan: {control.plan_medicacion or 'N/A'}. Próxima cita: {control.proxima_cita or 'Sin definir'}"
+        "ritmo_cardiaco": 0,
+        "tipo_arritmia": "N/A",
+        "sintomas": "N/A",
+        "diagnostico": "N/A",
+        "presion_arterial": "N/A",
+        "observaciones": ""
     }
+
+    if tipo_evento == 'control':
+        def si_no(val): return "Sí" if val else "No"
+        payload.update({
+            "ritmo_cardiaco": objeto.frecuencia_cardiaca,
+            "tipo_arritmia": objeto.diagnostico_ecg,
+            "sintomas": f"{objeto.sintomas}. Dolor pecho: {si_no(objeto.dolor_pecho)}, Disnea: {si_no(objeto.disnea)}, Mareos: {si_no(objeto.mareos)}, Edema: {si_no(objeto.edema)}",
+            "diagnostico": objeto.evolucion or "Sin evolución registrada",
+            "presion_arterial": f"{objeto.presion_sistolica}/{objeto.presion_diastolica} mmHg (SatO2: {objeto.saturacion_oxigeno}%)",
+            "observaciones": f"Plan: {objeto.plan_medicacion or 'N/A'}. Próxima cita: {objeto.proxima_cita or 'Sin definir'}"
+        })
+    
+    elif tipo_evento == 'arritmia':
+        payload.update({
+            "tipo_arritmia": objeto.tipo_arritmia,
+            "diagnostico": f"Nivel de Riesgo: {objeto.nivel_riesgo}",
+            "sintomas": f"Estado: {objeto.estado}",
+            "observaciones": f"Detección de Arritmia: {objeto.observaciones or 'Sin notas'}"
+        })
+
+    elif tipo_evento == 'examen':
+        payload.update({
+            "tipo_arritmia": f"Examen: {objeto.tipo_examen}",
+            "diagnostico": f"Resultado: {objeto.resultado or 'Pendiente'}",
+            "observaciones": f"Descripción del examen: {objeto.descripcion or 'Sin descripción'}"
+        })
+
+    elif tipo_evento == 'tratamiento':
+        meds = ", ".join([f"{m.nombre_medicamento} ({m.dosis})" for m in objeto.medicamentos.all()])
+        recs = ", ".join([f"{r.tipo_recomendacion}: {r.descripcion}" for r in objeto.recomendaciones.all()])
+        payload.update({
+            "tipo_arritmia": "Inicio de Tratamiento",
+            "diagnostico": f"Medicamentos: {meds if meds else 'Ninguno'}",
+            "sintomas": f"Estado: {objeto.estado}",
+            "observaciones": f"Recomendaciones: {recs if recs else 'Ninguna'}. Notas: {objeto.observaciones or ''}"
+        })
+
     try:
         requests.post(url, json=payload, timeout=5)
     except Exception as e:
-        print(f"Error sincronizando con Ollama: {e}")
+        print(f"Error sincronizando {tipo_evento} con Ollama: {e}")
 
 
 @api_view(['POST'])
@@ -405,7 +444,7 @@ def agregar_control(request, paciente_id):
     )
     if serializer.is_valid():
         instancia = serializer.save(paciente=paciente)
-        sincronizar_con_ollama(paciente, instancia)
+        sincronizar_con_ollama(paciente, 'control', instancia)
         respuesta = ControlCardiologicoSerializer(
             instancia,
             context={'request': request},
@@ -626,7 +665,8 @@ def gestionar_tratamientos_paciente(request, paciente_id):
     elif request.method == 'POST':
         serializer = TratamientoSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(paciente=paciente, doctor=request.user)
+            instancia = serializer.save(paciente=paciente, doctor=request.user)
+            sincronizar_con_ollama(paciente, 'tratamiento', instancia)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -33,6 +33,17 @@ class SideMenu extends StatelessWidget {
               }
             },
           ),
+          if (rol == 'paciente')
+            DrawerListTile(
+              title: "Mis Datos",
+              svgSrc: "assets/icons/menu_task.svg",
+              press: () {
+                menuController.setSelectedPage("patient_ai");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'doctor' || rol == 'superadmin' || rol == 'administrador')
             DrawerListTile(
               title: "Pacientes",
@@ -127,17 +138,6 @@ class SideMenu extends StatelessWidget {
               svgSrc: "assets/icons/menu_task.svg",
               press: () {
                 menuController.setSelectedPage("mis_tratamientos");
-                if (!Responsive.isDesktop(context)) {
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          if (rol == 'paciente')
-            DrawerListTile(
-              title: "Mi Asistente IA",
-              svgSrc: "assets/icons/menu_task.svg",
-              press: () {
-                menuController.setSelectedPage("patient_ai");
                 if (!Responsive.isDesktop(context)) {
                   Navigator.pop(context);
                 }

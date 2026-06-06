@@ -62,103 +62,18 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
   @override
   Widget build(BuildContext context) {
     final pacientesProvider = Provider.of<PacientesProvider>(context);
-    final ollamaProvider = Provider.of<PatientOllamaProvider>(context);
 
-    return Stack(
-      children: [
-        // CONTENIDO PRINCIPAL (HISTORIAL) - OCUPA TODO EL ANCHO
-        Container(
-          padding: const EdgeInsets.all(defaultPadding),
-          child: Column(
-            children: [
-              const Header(),
-              const SizedBox(height: defaultPadding),
-              Expanded(
-                child: _buildRecordsPanel(pacientesProvider),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(defaultPadding),
+      child: Column(
+        children: [
+          const Header(),
+          const SizedBox(height: defaultPadding),
+          Expanded(
+            child: _buildRecordsPanel(pacientesProvider),
           ),
-        ),
-
-        // VENTANA DE CHAT FLOTANTE
-        if (_isChatOpen)
-          Positioned(
-            right: 20,
-            bottom: 90,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 350,
-                height: 500,
-                decoration: BoxDecoration(
-                  color: secondaryColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                  border: Border.all(color: primaryColor.withOpacity(0.3)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Column(
-                    children: [
-                      // Barra superior de la ventana
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                        color: primaryColor,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-                                SizedBox(width: 10),
-                                Text(
-                                  "Asistente IA",
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                              onPressed: () => setState(() => _isChatOpen = false),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Cuerpo del chat
-                      Expanded(
-                        child: _buildChatPanelContent(ollamaProvider),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // BURBUJA FLOTANTE (BOTÓN)
-        Positioned(
-          right: 20,
-          bottom: 20,
-          child: FloatingActionButton(
-            backgroundColor: primaryColor,
-            onPressed: () {
-              setState(() {
-                _isChatOpen = !_isChatOpen;
-              });
-            },
-            child: Icon(
-              _isChatOpen ? Icons.close : Icons.auto_awesome,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -182,7 +97,7 @@ class _PatientAiScreenState extends State<PatientAiScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Mi Historial Cardológico",
+            "Mis Datos Médicos",
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: defaultPadding),

@@ -16,36 +16,48 @@ import 'package:flutter_frontend/features/pacientes/presentation/screens/seguimi
 import 'package:flutter_frontend/features/pacientes/presentation/screens/examenes_medicos_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/tratamientos_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/reportes_screen.dart';
-import 'package:flutter_frontend/features/pacientes/presentation/screens/mis_arritmias_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/mis_examenes_screen.dart';
 import 'package:flutter_frontend/features/pacientes/presentation/screens/mis_tratamientos_screen.dart';
+import 'package:flutter_frontend/features/pacientes/presentation/screens/mis_arritmias_screen.dart';
+import 'package:flutter_frontend/features/ollama/presentation/components/ollama_chat_bubble.dart';
+import 'package:flutter_frontend/features/auth/logic/auth_provider.dart';
 
 class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menuController = Provider.of<MenuAppController>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
     final isDesktop = Responsive.isDesktop(context);
+    final rol = authProvider.user?.rol.toLowerCase() ?? 'paciente';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       drawer: !isDesktop ? const SideMenu() : null,
       body: SafeArea(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            if (isDesktop)
-              const Expanded(
-                child: SideMenu(),
-              ),
-            Expanded(
-              flex: 5,
-              child: _getContent(menuController.selectedPage),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isDesktop)
+                  const Expanded(
+                    child: SideMenu(),
+                  ),
+                Expanded(
+                  flex: 5,
+                  child: _getContent(menuController.selectedPage),
+                ),
+              ],
             ),
+            // Burbuja de Chat Global para Pacientes
+            if (rol == 'paciente')
+              const OllamaChatBubble(),
           ],
         ),
       ),
     );
   }
+
 
   Widget _getContent(String page) {
     switch (page) {
