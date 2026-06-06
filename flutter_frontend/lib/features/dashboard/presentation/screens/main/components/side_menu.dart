@@ -77,6 +77,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "6. Tratamientos y Rec.",
+              svgSrc: "assets/icons/menu_task.svg",
+              press: () {
+                menuController.setSelectedPage("tratamientos_recomendaciones");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mi Asistente IA",

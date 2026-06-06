@@ -20,4 +20,8 @@ urlpatterns = [
     # Gestión de Exámenes CRUD
     path('<int:paciente_id>/examenes/', views.gestionar_examenes_paciente, name='gestionar_examenes'),
     path('examenes/<uuid:pk>/', views.detalle_examen_medico, name='detalle_examen'),
+
+    # Gestión de Tratamientos CRUD
+    path('<int:paciente_id>/tratamientos/', views.gestionar_tratamientos_paciente, name='gestionar_tratamientos'),
+    path('tratamientos/<uuid:pk>/', views.detalle_tratamiento, name='detalle_tratamiento'),
 ]

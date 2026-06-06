@@ -194,6 +194,122 @@ class ExamenMedicoModel {
   }
 }
 
+class MedicamentoModel {
+  final String id;
+  final String nombreMedicamento;
+  final String dosis;
+  final String frecuencia;
+  final String duracion;
+  final String? observaciones;
+
+  MedicamentoModel({
+    required this.id,
+    required this.nombreMedicamento,
+    required this.dosis,
+    required this.frecuencia,
+    required this.duracion,
+    this.observaciones,
+  });
+
+  factory MedicamentoModel.fromJson(Map<String, dynamic> json) {
+    return MedicamentoModel(
+      id: json['id'] ?? '',
+      nombreMedicamento: json['nombre_medicamento'] ?? '',
+      dosis: json['dosis'] ?? '',
+      frecuencia: json['frecuencia'] ?? '',
+      duracion: json['duracion'] ?? '',
+      observaciones: json['observaciones'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'nombre_medicamento': nombreMedicamento,
+    'dosis': dosis,
+    'frecuencia': frecuencia,
+    'duracion': duracion,
+    'observaciones': observaciones,
+  };
+}
+
+class RecomendacionModel {
+  final String id;
+  final String tipoRecomendacion;
+  final String descripcion;
+
+  RecomendacionModel({
+    required this.id,
+    required this.tipoRecomendacion,
+    required this.descripcion,
+  });
+
+  factory RecomendacionModel.fromJson(Map<String, dynamic> json) {
+    return RecomendacionModel(
+      id: json['id'] ?? '',
+      tipoRecomendacion: json['tipo_recomendacion'] ?? '',
+      descripcion: json['descripcion'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'tipo_recomendacion': tipoRecomendacion,
+    'descripcion': descripcion,
+  };
+}
+
+class TratamientoModel {
+  final String id;
+  final int paciente;
+  final String? doctor;
+  final String fechaInicio;
+  final String? fechaFin;
+  final String estado;
+  final String? observaciones;
+  final List<MedicamentoModel> medicamentos;
+  final List<RecomendacionModel> recomendaciones;
+  final String createdAt;
+  final String updatedAt;
+
+  TratamientoModel({
+    required this.id,
+    required this.paciente,
+    this.doctor,
+    required this.fechaInicio,
+    this.fechaFin,
+    required this.estado,
+    this.observaciones,
+    required this.medicamentos,
+    required this.recomendaciones,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory TratamientoModel.fromJson(Map<String, dynamic> json) {
+    var listaMedsRaw = json['medicamentos'] as List? ?? [];
+    List<MedicamentoModel> medsMapeados = listaMedsRaw
+        .map((mJson) => MedicamentoModel.fromJson(mJson))
+        .toList();
+
+    var listaRecsRaw = json['recomendaciones'] as List? ?? [];
+    List<RecomendacionModel> recsMapeadas = listaRecsRaw
+        .map((rJson) => RecomendacionModel.fromJson(rJson))
+        .toList();
+
+    return TratamientoModel(
+      id: json['id'] ?? '',
+      paciente: json['paciente'] ?? 0,
+      doctor: json['doctor']?.toString(),
+      fechaInicio: json['fecha_inicio'] ?? '',
+      fechaFin: json['fecha_fin'],
+      estado: json['estado'] ?? 'Activo',
+      observaciones: json['observaciones'],
+      medicamentos: medsMapeados,
+      recomendaciones: recsMapeadas,
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
+    );
+  }
+}
+
 class ArritmiaModel {
   final String id;
   final int paciente;
@@ -255,6 +371,7 @@ class PacienteModel {
   final List<HistorialClinicoModel> historialesClinicos;
   final List<ArritmiaModel> arritmias;
   final List<ExamenMedicoModel> examenesMedicos;
+  final List<TratamientoModel> tratamientos;
 
   PacienteModel({
     required this.id,
@@ -271,6 +388,7 @@ class PacienteModel {
     required this.historialesClinicos,
     required this.arritmias,
     required this.examenesMedicos,
+    required this.tratamientos,
   });
 
   factory PacienteModel.fromJson(Map<String, dynamic> json) {
@@ -294,6 +412,11 @@ class PacienteModel {
         .map((eJson) => ExamenMedicoModel.fromJson(eJson))
         .toList();
 
+    var listaTratamientosRaw = json['tratamientos'] as List? ?? [];
+    List<TratamientoModel> tratamientosMapeados = listaTratamientosRaw
+        .map((tJson) => TratamientoModel.fromJson(tJson))
+        .toList();
+
     return PacienteModel(
       id: json['id'] ?? 0,
       nombre: json['nombre'] ?? 'Sin nombre',
@@ -309,6 +432,7 @@ class PacienteModel {
       historialesClinicos: historialesMapeados,
       arritmias: arritmiasMapeadas,
       examenesMedicos: examenesMapeados,
+      tratamientos: tratamientosMapeados,
     );
   }
 

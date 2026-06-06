@@ -1,6 +1,70 @@
 # backend/pacientes/serializers.py
 from rest_framework import serializers
-from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia, ExamenMedico
+from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia, ExamenMedico, Tratamiento, MedicamentoTratamiento, Recomendacion
+
+
+class MedicamentoTratamientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicamentoTratamiento
+        fields = ['id', 'nombre_medicamento', 'dosis', 'frecuencia', 'duracion', 'observaciones']
+
+
+class RecomendacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recomendacion
+        fields = ['id', 'tipo_recomendacion', 'descripcion']
+
+
+class TratamientoSerializer(serializers.ModelSerializer):
+    medicamentos = MedicamentoTratamientoSerializer(many=True)
+    recomendaciones = RecomendacionSerializer(many=True)
+
+    class Meta:
+        model = Tratamiento
+        fields = [
+            'id', 'paciente', 'doctor', 'fecha_inicio', 'fecha_fin', 
+            'estado', 'observaciones', 'medicamentos', 'recomendaciones',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'paciente', 'doctor', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        medicamentos_data = validated_data.pop('medicamentos')
+        recomendaciones_data = validated_data.pop('recomendaciones')
+        
+        tratamiento = Tratamiento.objects.create(**validated_data)
+        
+        for med_data in medicamentos_data:
+            MedicamentoTratamiento.objects.create(tratamiento=tratamiento, **med_data)
+            
+        for rec_data in recomendaciones_data:
+            Recomendacion.objects.create(tratamiento=tratamiento, **rec_data)
+            
+        return tratamiento
+
+    def update(self, instance, validated_data):
+        medicamentos_data = validated_data.pop('medicamentos', None)
+        recomendaciones_data = validated_data.pop('recomendaciones', None)
+        
+        # Actualizar campos básicos
+        instance.fecha_inicio = validated_data.get('fecha_inicio', instance.fecha_inicio)
+        instance.fecha_fin = validated_data.get('fecha_fin', instance.fecha_fin)
+        instance.estado = validated_data.get('estado', instance.estado)
+        instance.observaciones = validated_data.get('observaciones', instance.observaciones)
+        instance.save()
+        
+        # Si se envían medicamentos/recomendaciones, reemplazamos los existentes (lógica simple)
+        if medicamentos_data is not None:
+            instance.medicamentos.all().delete()
+            for med_data in medicamentos_data:
+                MedicamentoTratamiento.objects.create(tratamiento=instance, **med_data)
+                
+        if recomendaciones_data is not None:
+            instance.recomendaciones.all().delete()
+            for rec_data in recomendaciones_data:
+                Recomendacion.objects.create(tratamiento=instance, **rec_data)
+                
+        return instance
 
 
 class ExamenMedicoSerializer(serializers.ModelSerializer):
@@ -123,6 +187,7 @@ class PacienteSerializer(serializers.ModelSerializer):
     historiales_clinicos = serializers.SerializerMethodField()
     arritmias = serializers.SerializerMethodField()
     examenes_medicos = serializers.SerializerMethodField()
+    tratamientos = serializers.SerializerMethodField()
 
     # NUEVO: campo de foto con URL absoluta
     foto = serializers.ImageField(use_url=True, required=False, allow_null=True)
@@ -144,6 +209,7 @@ class PacienteSerializer(serializers.ModelSerializer):
             'historiales_clinicos',
             'arritmias',
             'examenes_medicos',
+            'tratamientos',
             'foto',
         ]
 
@@ -173,3 +239,8 @@ class PacienteSerializer(serializers.ModelSerializer):
         # Usamos el related_name definido en el modelo
         examenes = obj.examenes_medicos.all().order_by('-fecha_examen')
         return ExamenMedicoSerializer(examenes, many=True, context=self.context).data
+
+    def get_tratamientos(self, obj):
+        # Usamos el related_name definido en el modelo
+        tratamientos = obj.tratamientos.all().order_by('-fecha_inicio')
+        return TratamientoSerializer(tratamientos, many=True, context=self.context).data

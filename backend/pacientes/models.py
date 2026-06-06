@@ -177,5 +177,74 @@ class ExamenMedico(models.Model):
         verbose_name_plural = "Exámenes Médicos"
         ordering = ['-fecha_examen']
 
+class Tratamiento(models.Model):
+    ESTADO_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Suspendido', 'Suspendido'),
+        ('Finalizado', 'Finalizado'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='tratamientos')
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='tratamientos_prescritos'
+    )
+    
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(blank=True, null=True)
+    estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='Activo')
+    observaciones = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Tratamiento"
+        verbose_name_plural = "Tratamientos"
+        ordering = ['-fecha_inicio']
+
     def __str__(self):
-        return f"{self.get_tipo_examen_display()} - {self.paciente.usuario.email}"
+        return f"Tratamiento {self.paciente.usuario.email} - {self.estado}"
+
+
+class MedicamentoTratamiento(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tratamiento = models.ForeignKey(Tratamiento, on_delete=models.CASCADE, related_name='medicamentos')
+    
+    nombre_medicamento = models.CharField(max_length=100)
+    dosis = models.CharField(max_length=50)
+    frecuencia = models.CharField(max_length=100)
+    duracion = models.CharField(max_length=50)
+    observaciones = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Medicamento de Tratamiento"
+        verbose_name_plural = "Medicamentos de Tratamiento"
+
+    def __str__(self):
+        return f"{self.nombre_medicamento} - {self.dosis}"
+
+
+class Recomendacion(models.Model):
+    TIPO_RECOMENDACION_CHOICES = [
+        ('Ejercicio', 'Ejercicio'),
+        ('Dieta', 'Dieta'),
+        ('Restricción', 'Restricción'),
+        ('Control Médico', 'Control Médico'),
+        ('Otro', 'Otro'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tratamiento = models.ForeignKey(Tratamiento, on_delete=models.CASCADE, related_name='recomendaciones')
+    
+    tipo_recomendacion = models.CharField(max_length=50, choices=TIPO_RECOMENDACION_CHOICES)
+    descripcion = models.TextField()
+
+    class Meta:
+        verbose_name = "Recomendación"
+        verbose_name_plural = "Recomendaciones"
+
+    def __str__(self):
+        return f"{self.tipo_recomendacion} - {self.tratamiento.paciente.usuario.email}"

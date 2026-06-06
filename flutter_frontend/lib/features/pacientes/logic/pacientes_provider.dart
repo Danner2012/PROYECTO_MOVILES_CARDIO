@@ -503,4 +503,85 @@ class PacientesProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ── Gestión de Tratamientos y Recomendaciones ──────────────────────────
+
+  Future<bool> registrarTratamiento({
+    required String token,
+    required int pacienteId,
+    required Map<String, dynamic> datos,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/$pacienteId/tratamientos/'),
+        headers: _headers(token),
+        body: json.encode(datos),
+      );
+      if (response.statusCode == 201) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('registrarTratamiento excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> actualizarTratamiento({
+    required String token,
+    required String tratamientoId,
+    required Map<String, dynamic> datos,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/tratamientos/$tratamientoId/'),
+        headers: _headers(token),
+        body: json.encode(datos),
+      );
+      if (response.statusCode == 200) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('actualizarTratamiento excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> eliminarTratamiento({
+    required String token,
+    required String tratamientoId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/tratamientos/$tratamientoId/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('eliminarTratamiento excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
