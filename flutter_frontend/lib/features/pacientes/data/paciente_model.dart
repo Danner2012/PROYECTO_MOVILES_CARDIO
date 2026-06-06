@@ -62,6 +62,56 @@ class ControlCardioModel {
   }
 }
 
+class HistorialClinicoModel {
+  final String id;
+  final int paciente;
+  final String? doctor;
+  final String fechaRegistro;
+  final String motivoConsulta;
+  final String? antecedentesCardiacos;
+  final String? antecedentesFamiliares;
+  final String? enfermedadesPrevias;
+  final String? alergias;
+  final String? observacionesMedicas;
+  final String estadoActual;
+  final String createdAt;
+  final String updatedAt;
+
+  HistorialClinicoModel({
+    required this.id,
+    required this.paciente,
+    this.doctor,
+    required this.fechaRegistro,
+    required this.motivoConsulta,
+    this.antecedentesCardiacos,
+    this.antecedentesFamiliares,
+    this.enfermedadesPrevias,
+    this.alergias,
+    this.observacionesMedicas,
+    required this.estadoActual,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory HistorialClinicoModel.fromJson(Map<String, dynamic> json) {
+    return HistorialClinicoModel(
+      id: json['id'] ?? '',
+      paciente: json['paciente'] ?? 0,
+      doctor: json['doctor']?.toString(),
+      fechaRegistro: json['fecha_registro'] ?? '',
+      motivoConsulta: json['motivo_consulta'] ?? '',
+      antecedentesCardiacos: json['antecedentes_cardiacos'],
+      antecedentesFamiliares: json['antecedentes_familiares'],
+      enfermedadesPrevias: json['enfermedades_previas'],
+      alergias: json['alergias'],
+      observacionesMedicas: json['observaciones_medicas'],
+      estadoActual: json['estado_actual'] ?? '',
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
+    );
+  }
+}
+
 class PacienteModel {
   final int id;
   final String nombre;
@@ -72,8 +122,9 @@ class PacienteModel {
   final double tallaInicial;
   final String alergias;
   final String antecedentesBase;
-  final String? foto; // ← NUEVO: URL absoluta de la foto de perfil
+  final String? foto;
   final List<ControlCardioModel> historialControles;
+  final List<HistorialClinicoModel> historialesClinicos;
 
   PacienteModel({
     required this.id,
@@ -87,12 +138,18 @@ class PacienteModel {
     required this.antecedentesBase,
     this.foto,
     required this.historialControles,
+    required this.historialesClinicos,
   });
 
   factory PacienteModel.fromJson(Map<String, dynamic> json) {
     var listaControlesRaw = json['historial_controles'] as List? ?? [];
     List<ControlCardioModel> controlesMapeados = listaControlesRaw
         .map((controlJson) => ControlCardioModel.fromJson(controlJson))
+        .toList();
+
+    var listaHistorialesRaw = json['historiales_clinicos'] as List? ?? [];
+    List<HistorialClinicoModel> historialesMapeados = listaHistorialesRaw
+        .map((hJson) => HistorialClinicoModel.fromJson(hJson))
         .toList();
 
     return PacienteModel(
@@ -105,8 +162,9 @@ class PacienteModel {
       tallaInicial: _toDouble(json['talla_inicial']),
       alergias: json['alergias'] ?? 'Ninguna',
       antecedentesBase: json['antecedentes_base'] ?? 'Ninguno',
-      foto: json['foto'], // ← Se parsea la URL
+      foto: json['foto'],
       historialControles: controlesMapeados,
+      historialesClinicos: historialesMapeados,
     );
   }
 

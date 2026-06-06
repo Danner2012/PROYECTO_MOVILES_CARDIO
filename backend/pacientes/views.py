@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from .models import Paciente
-from .serializers import PacienteSerializer, ControlCardiologicoSerializer
+from .models import Paciente, ControlCardiologico, HistorialClinico
+from .serializers import PacienteSerializer, ControlCardiologicoSerializer, HistorialClinicoSerializer
 
 User = get_user_model()
 
@@ -24,6 +24,64 @@ def es_paciente(usuario):
         return str(usuario.rol).lower() == 'paciente'
     except Exception:
         return False
+
+
+# --- Historial Clínico CRUD ---
+
+@api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def gestionar_historial_paciente(request, paciente_id):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        paciente = Paciente.objects.get(id=paciente_id, doctor=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Paciente no encontrado o no pertenece a tu lista."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        historiales = paciente.historiales_clinicos.all()
+        serializer = HistorialClinicoSerializer(historiales, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = HistorialClinicoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(paciente=paciente, doctor=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def detalle_historial_clinico(request, pk):
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        historial = HistorialClinico.objects.get(id=pk, doctor=request.user)
+    except HistorialClinico.DoesNotExist:
+        return Response({"error": "Registro de historial no encontrado o no tienes permiso."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = HistorialClinicoSerializer(historial)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = HistorialClinicoSerializer(historial, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        historial.delete()
+        return Response({"mensaje": "Registro eliminado correctamente."}, status=status.HTTP_204_NO_CONTENT)
+
+
+# --- Vistas Existentes ---
 
 
 @api_view(['GET'])

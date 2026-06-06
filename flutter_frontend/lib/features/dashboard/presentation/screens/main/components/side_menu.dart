@@ -44,6 +44,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "3. Historial Clínico",
+              svgSrc: "assets/icons/menu_doc.svg",
+              press: () {
+                menuController.setSelectedPage("historial_clinico");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mi Asistente IA",

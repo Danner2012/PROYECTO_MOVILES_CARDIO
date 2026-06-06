@@ -11,6 +11,8 @@ import 'package:provider/provider.dart';
 
 import 'components/side_menu.dart';
 
+import 'package:flutter_frontend/features/pacientes/presentation/screens/historial_clinico_screen.dart';
+
 class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,6 @@ class MainScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      // Se elimina la clave global para evitar el error Duplicate GlobalKey
       drawer: !isDesktop ? const SideMenu() : null,
       body: SafeArea(
         child: Row(
@@ -53,6 +54,8 @@ class MainScreen extends StatelessWidget {
         return const PacientesScreen();
       case "patient_ai":
         return const PatientAiScreen();
+      case "historial_clinico":
+        return const HistorialClinicoScreen();
       default:
         return DashboardScreen();
     }

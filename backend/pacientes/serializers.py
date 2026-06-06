@@ -1,6 +1,6 @@
 # backend/pacientes/serializers.py
 from rest_framework import serializers
-from .models import Paciente, ControlCardiologico
+from .models import Paciente, ControlCardiologico, HistorialClinico
 
 
 class ControlCardiologicoSerializer(serializers.ModelSerializer):
@@ -33,10 +33,32 @@ class ControlCardiologicoSerializer(serializers.ModelSerializer):
         ]
 
 
+class HistorialClinicoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistorialClinico
+        fields = [
+            'id',
+            'paciente',
+            'doctor',
+            'fecha_registro',
+            'motivo_consulta',
+            'antecedentes_cardiacos',
+            'antecedentes_familiares',
+            'enfermedades_previas',
+            'alergias',
+            'observaciones_medicas',
+            'estado_actual',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'paciente', 'doctor', 'created_at', 'updated_at']
+
+
 class PacienteSerializer(serializers.ModelSerializer):
     nombre = serializers.SerializerMethodField()
     email  = serializers.CharField(source='usuario.email', read_only=True)
     historial_controles = serializers.SerializerMethodField()
+    historiales_clinicos = serializers.SerializerMethodField()
 
     # NUEVO: campo de foto con URL absoluta
     foto = serializers.ImageField(use_url=True, required=False, allow_null=True)
@@ -55,6 +77,7 @@ class PacienteSerializer(serializers.ModelSerializer):
             'antecedentes_base',
             'fecha_registro',
             'historial_controles',
+            'historiales_clinicos',
             'foto',   # ← nuevo campo
         ]
 
@@ -72,4 +95,11 @@ class PacienteSerializer(serializers.ModelSerializer):
             many=True,
             context=self.context,
         ).data
-    
+
+    def get_historiales_clinicos(self, obj):
+        historiales = obj.historiales_clinicos.all()
+        return HistorialClinicoSerializer(
+            historiales,
+            many=True,
+            context=self.context,
+        ).data

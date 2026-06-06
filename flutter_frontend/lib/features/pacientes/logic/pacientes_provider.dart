@@ -173,4 +173,86 @@ class PacientesProvider with ChangeNotifier {
       return false;
     }
   }
+
+  // ── Agregar historial clínico ───────────────────────────────────────────
+  Future<bool> agregarHistorialClinico({
+    required String token,
+    required int pacienteId,
+    required Map<String, dynamic> datosHistorial,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/$pacienteId/historial/'),
+        headers: _headers(token),
+        body: json.encode(datosHistorial),
+      );
+      if (response.statusCode == 201) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('agregarHistorialClinico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Actualizar registro de historial ─────────────────────────────────────
+  Future<bool> actualizarHistorialClinico({
+    required String token,
+    required String historialId,
+    required Map<String, dynamic> datosHistorial,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/historial/$historialId/'),
+        headers: _headers(token),
+        body: json.encode(datosHistorial),
+      );
+      if (response.statusCode == 200) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('actualizarHistorialClinico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Eliminar registro de historial ───────────────────────────────────────
+  Future<bool> eliminarHistorialClinico({
+    required String token,
+    required String historialId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/historial/$historialId/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 204) {
+        await cargarPacientes(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('eliminarHistorialClinico excepción: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

@@ -1,4 +1,5 @@
 # backend/pacientes/models.py
+import uuid
 from django.db import models
 from django.conf import settings
 
@@ -63,4 +64,33 @@ class ControlCardiologico(models.Model):
 
     def __str__(self):
         return f"Control de {self.paciente.usuario.email} - {self.fecha.strftime('%d/%m/%Y')}"
+
+
+class HistorialClinico(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='historiales_clinicos')
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='historiales_medicos_creados'
+    )
     
+    fecha_registro = models.DateTimeField()
+    motivo_consulta = models.TextField()
+    antecedentes_cardiacos = models.TextField(blank=True, null=True)
+    antecedentes_familiares = models.TextField(blank=True, null=True)
+    enfermedades_previas = models.TextField(blank=True, null=True)
+    alergias = models.TextField(blank=True, null=True)
+    observaciones_medicas = models.TextField(blank=True, null=True)
+    estado_actual = models.CharField(max_length=100)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Historial Clínico"
+        verbose_name_plural = "Historiales Clínicos"
+        ordering = ['-fecha_registro']
+
+    def __str__(self):
+        return f"Historial {self.paciente.usuario.email} - {self.fecha_registro.strftime('%d/%m/%Y')}"
