@@ -415,6 +415,51 @@ def agregar_control(request, paciente_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from django.http import HttpResponse
+from .utils import generar_pdf_paciente
+
+
+from rest_framework_simplejwt.tokens import AccessToken
+from django.contrib.auth import get_user_model
+
+# ... (otras vistas)
+
+# --- Gestión de Reportes PDF ---
+
+@api_view(['GET'])
+@permission_classes([]) # Permitimos el acceso para validar el token manualmente
+@authentication_classes([])
+def descargar_reporte_paciente(request, paciente_id):
+    # Intentamos obtener el token del header o de la URL
+    token_str = request.query_params.get('token')
+    
+    if not token_str:
+        return Response({"error": "Credenciales no proporcionadas."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        # Validar el token manualmente
+        access_token = AccessToken(token_str)
+        user_id = access_token['user_id']
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        if not es_doctor(user):
+            return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
+            
+        paciente = Paciente.objects.get(id=paciente_id, doctor=user)
+        
+        pdf_content = generar_pdf_paciente(paciente, user)
+        
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        filename = f"reporte_{paciente.usuario.email}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return Response({"error": f"Token inválido o expirado. {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
 # --- Gestión de Tratamientos CRUD ---
 
 @api_view(['GET', 'POST'])

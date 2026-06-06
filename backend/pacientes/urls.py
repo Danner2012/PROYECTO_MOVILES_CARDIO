@@ -24,4 +24,7 @@ urlpatterns = [
     # Gestión de Tratamientos CRUD
     path('<int:paciente_id>/tratamientos/', views.gestionar_tratamientos_paciente, name='gestionar_tratamientos'),
     path('tratamientos/<uuid:pk>/', views.detalle_tratamiento, name='detalle_tratamiento'),
+
+    # Reportes PDF
+    path('<int:paciente_id>/reporte-pdf/', views.descargar_reporte_paciente, name='descargar_reporte'),
 ]

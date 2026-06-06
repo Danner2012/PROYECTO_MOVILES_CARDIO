@@ -88,6 +88,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "8. Reportes",
+              svgSrc: "assets/icons/Documents.svg",
+              press: () {
+                menuController.setSelectedPage("reportes_pacientes");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mi Asistente IA",
