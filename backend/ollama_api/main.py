@@ -6,10 +6,10 @@ import json
 from database import get_db, engine
 import models, schemas, crud
 
-models.Base.metadata.create_all(bind=engine)
+# No creamos tablas aquí para no interferir con Django, solo usamos las existentes
+# models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cardio Ollama API")
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,59 +27,39 @@ def create_record(record: schemas.CardioCreate, db: Session = Depends(get_db)):
 
 @app.post("/chat", response_model=schemas.ChatResponse)
 async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get_db)):
-    matched_records = crud.search_cardio_records(db, request.question, request.patient_name)
+    # Ahora crud.search_cardio_records devuelve un string con todo el contexto real
+    db_context = crud.search_cardio_records(db, request.question, request.patient_name)
 
     print(f"\n--- DEBUG: PREGUNTA RECIBIDA: {request.question} ---")
     if request.patient_name:
-        print(f"DEBUG: Paciente: {request.patient_name}")
-    print(f"DEBUG: Cantidad de registros encontrados: {len(matched_records)}")
+        print(f"DEBUG: Identidad Paciente: {request.patient_name}")
 
     if request.patient_name:
         system_prompt = (
             "Eres el asistente personal de salud experto de Cardio-Project. "
             f"Estás hablando con el paciente {request.patient_name}. "
-            "TU MISION es explicarle sus datos médicos de forma clara, empática y profesional. "
-            "Tienes acceso a su historial completo: Controles, Arritmias, Exámenes y Tratamientos. "
-            "REGLAS DE COMUNICACIÓN:\n"
-            "1. HABLA EN SEGUNDA PERSONA: Usa 'Tus resultados', 'Tu tratamiento', 'Tu médico registró'.\n"
-            "2. EXPLICACIÓN INTEGRAL: Si pregunta por arritmias, menciona el riesgo. Si pregunta por tratamientos, detalla medicamentos.\n"
-            "3. ESTRUCTURA: Usa negritas (**), listas (-) y párrafos cortos.\n"
-            "4. SEGURIDAD: No recetes nada nuevo, solo explica lo que ya está registrado. Ante dudas graves, recomienda contactar a su doctor.\n"
-            "5. SÉ AMABLE: Tu objetivo es reducir la ansiedad del paciente informándole bien."
+            "TU MISION es realizar una LECTURA PUNTUAL de sus datos médicos. "
+            "REGLAS DE ORO:\n"
+            "1. LECTURA PUNTUAL: Extrae valores exactos de la base de datos (presión, frecuencia, dosis). No los resumas si el usuario pide detalle.\n"
+            "2. TIPOS DE SOLICITUD:\n"
+            "   a) GENERAL: Si el usuario pregunta qué es una enfermedad, usa tu conocimiento médico.\n"
+            "   b) PUNTUAL: Si pregunta por sus datos, usa SOLO la información de la sección 'DATOS REALES'.\n"
+            "3. HABLA EN SEGUNDA PERSONA: 'Tus resultados', 'Tu médico registró'.\n"
+            "4. SEGURIDAD: Nunca recetes, solo informa sobre lo registrado.\n"
+            "5. ESTRUCTURA: Usa Markdown (negritas y listas)."
         )
     else:
         system_prompt = (
-            "Eres un asistente médico experto en cardiología del sistema Cardio-Project. "
-            "TU TAREA es responder de forma inteligente basándote en el contexto proporcionado. "
-            "REGLAS CRÍTICAS:\n"
-            "1. Usa Markdown profesional: Negritas para términos clave y listas para enumerar hallazgos.\n"
-            "2. Si el usuario hace una PREGUNTA GENERAL, responde de forma educativa.\n"
-            "3. Si el usuario pregunta por DATOS REALES o REGISTROS, utiliza la información de la BASE DE DATOS con precisión.\n"
-            "4. Sé conciso y técnico pero accesible."
+            "Eres un asistente médico experto en cardiología. "
+            "Si el usuario pregunta por datos específicos, realiza una LECTURA PUNTUAL de la base de datos proporcionada. "
+            "Sé técnico, preciso y profesional."
         )
 
-    context = ""
-    if matched_records:
-        header = f"--- DATOS REALES DE {request.patient_name.upper()} ---" if request.patient_name else "--- REGISTROS DE LA BASE DE DATOS ---"
-        context += f"{header}\n"
-        for r in matched_records:
-            context += (
-                f"- FECHA DEL REGISTRO: {r.fecha_registro.strftime('%d/%m/%Y')}\n"
-                f"  * Ritmo Cardíaco: {r.ritmo_cardiaco} pulsaciones por minuto (BPM)\n"
-                f"  * Presión Arterial: {r.presion_arterial}\n"
-                f"  * Tipo de Arritmia/ECG: {r.tipo_arritmia}\n"
-                f"  * Diagnóstico del Doctor: {r.diagnostico}\n"
-                f"  * Síntomas Reportados: {r.sintomas}\n"
-                f"  * Observaciones/Plan: {r.observaciones}\n"
-                "-------------------------------------------\n"
-            )
-    else:
-        if request.patient_name:
-            context += f"AVISO: No se encontraron registros específicos para la pregunta de {request.patient_name}. Responde de forma general y educativa.\n"
+    full_prompt_context = f"--- DATOS REALES DEL PACIENTE DESDE LA BASE DE DATOS ---\n{db_context}\n\n"
+    full_prompt_context += f"PREGUNTA DEL USUARIO: {request.question}\n"
     
-    context += f"\nPREGUNTA DEL USUARIO: {request.question}\n"
-    context += "\nResponde siguiendo las reglas del sistema."
-
+    print("--- CONTEXTO ENVIADO A OLLAMA ---")
+    print(db_context)
     print("--- FIN DEBUG ---\n")
 
     try:
@@ -90,7 +70,7 @@ async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get
                     "model": "mistral",
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": context}
+                        {"role": "user", "content": full_prompt_context}
                     ],
                     "stream": False
                 }
@@ -104,7 +84,7 @@ async def chat_with_data(request: schemas.ChatRequest, db: Session = Depends(get
             
             return schemas.ChatResponse(
                 answer=answer,
-                matched_records=[schemas.CardioResponse.model_validate(r) for r in matched_records]
+                matched_records=[] # Ya no devolvemos objetos individuales en esta versión simplificada
             )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el servidor: {str(e)}")

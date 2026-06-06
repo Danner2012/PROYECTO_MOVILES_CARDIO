@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, desc
 import models, schemas
+from datetime import datetime
 
 def create_cardio_record(db: Session, record: schemas.CardioCreate):
     db_record = models.CardioRecord(**record.model_dump())
@@ -8,88 +10,79 @@ def create_cardio_record(db: Session, record: schemas.CardioCreate):
     db.refresh(db_record)
     return db_record
 
-def get_cardio_records(db: Session, skip: int = 0, limit: int = 200):
-    return db.query(models.CardioRecord).offset(skip).limit(limit).all()
-
-def get_cardio_record(db: Session, record_id: int):
-    return db.query(models.CardioRecord).filter(models.CardioRecord.id == record_id).first()
-
-def update_cardio_record(db: Session, record_id: int, record_update: schemas.CardioUpdate):
-    db_record = get_cardio_record(db, record_id)
-    if db_record:
-        for key, value in record_update.model_dump(exclude_unset=True).items():
-            setattr(db_record, key, value)
-        db.commit()
-        db.refresh(db_record)
-    return db_record
-
-def delete_cardio_record(db: Session, record_id: int):
-    db_record = get_cardio_record(db, record_id)
-    if db_record:
-        db.delete(db_record)
-        db.commit()
-        return db_record
-
-# Función para buscar registros basados en palabras clave de la pregunta
-def search_cardio_records(db: Session, query: str, patient_name: str = None):
-    # Limpiar la pregunta: quitar signos de interrogación y pasar a minúsculas
+def search_cardio_records(db: Session, query: str, patient_identity: str = None):
+    """
+    Busca información en todas las tablas reales del sistema basadas en el paciente.
+    """
     clean_query = query.replace("?", "").replace("¿", "").lower()
-    words = clean_query.split()
     
-    # Filtrar palabras comunes que no aportan a la búsqueda
-    stop_words = ["quien", "es", "que", "dime", "sobre", "el", "la", "los", "las", "un", "una", "de", "del", "paciente", "diagnostico", "tiene"]
-    keywords = [w for w in words if w not in stop_words and len(w) > 2]
+    context_parts = []
+    
+    if patient_identity:
+        # 1. Buscar al paciente (por email, nombre o apellido en Perfil)
+        paciente = db.query(models.Paciente).join(models.User).outerjoin(models.Perfil).filter(
+            or_(
+                models.User.email.ilike(f"%{patient_identity}%"),
+                models.Perfil.nombre.ilike(f"%{patient_identity}%"),
+                models.Perfil.apellido.ilike(f"%{patient_identity}%")
+            )
+        ).first()
 
-    from sqlalchemy import or_, and_, desc
+        if paciente:
+            nombre_completo = f"{paciente.usuario.perfil.nombre} {paciente.usuario.perfil.apellido}" if paciente.usuario.perfil else paciente.usuario.email
+            context_parts.append(f"DATOS GENERALES: Paciente {nombre_completo}, Edad: {paciente.edad}, Sexo: {paciente.sexo}. Alergias: {paciente.alergias}. Antecedentes: {paciente.antecedentes_base}.")
 
-    if patient_name:
-        # ESTRATEGIA PARA PACIENTE: Siempre traer sus últimos 3 registros como base
-        # más cualquier otro registro que coincida con las palabras clave.
-        
-        # 1. Obtener los 3 más recientes
-        latest_records = db.query(models.CardioRecord).filter(
-            models.CardioRecord.paciente.ilike(f"%{patient_name}%")
-        ).order_by(desc(models.CardioRecord.fecha_registro)).limit(3).all()
-        
-        # 2. Si hay palabras clave, buscar coincidencias específicas
-        keyword_records = []
-        if keywords:
-            conditions = []
-            for word in keywords:
-                search_term = f"%{word}%"
-                conditions.append(models.CardioRecord.tipo_arritmia.ilike(search_term))
-                conditions.append(models.CardioRecord.diagnostico.ilike(search_term))
-                conditions.append(models.CardioRecord.sintomas.ilike(search_term))
-                conditions.append(models.CardioRecord.presion_arterial.ilike(search_term))
+            # 2. Buscar Controles (los últimos 3)
+            controles = db.query(models.ControlCardiologico).filter(
+                models.ControlCardiologico.paciente_id == paciente.id
+            ).order_by(desc(models.ControlCardiologico.fecha)).limit(3).all()
             
-            keyword_records = db.query(models.CardioRecord).filter(
-                and_(
-                    models.CardioRecord.paciente.ilike(f"%{patient_name}%"),
-                    or_(*conditions)
-                )
+            if controles:
+                context_parts.append("ÚLTIMOS CONTROLES:")
+                for c in controles:
+                    fecha_str = c.fecha.strftime('%d/%m/%Y') if c.fecha else "Sin fecha"
+                    context_parts.append(f"- Fecha: {fecha_str}, Presión: {c.presion_sistolica}/{c.presion_diastolica}, Frecuencia: {c.frecuencia_cardiaca} BPM, SatO2: {c.saturacion_oxigeno}%, ECG: {c.diagnostico_ecg}, Síntomas: {c.sintomas}")
+
+            # 3. Buscar Arritmias
+            arritmias = db.query(models.Arritmia).filter(
+                models.Arritmia.paciente_id == paciente.id
+            ).order_by(desc(models.Arritmia.fecha_deteccion)).all()
+            
+            if arritmias:
+                context_parts.append("ARRITMIAS DETECTADAS:")
+                for a in arritmias:
+                    context_parts.append(f"- {a.tipo_arritmia} detectada el {a.fecha_deteccion}, Riesgo: {a.nivel_riesgo}, Estado: {a.estado}")
+
+            # 4. Buscar Tratamientos y Medicamentos
+            tratamientos = db.query(models.Tratamiento).filter(
+                models.Tratamiento.paciente_id == paciente.id,
+                models.Tratamiento.estado == "Activo"
+            ).all()
+            
+            if tratamientos:
+                context_parts.append("TRATAMIENTOS ACTIVOS:")
+                for t in tratamientos:
+                    context_parts.append(f"- Tratamiento iniciado el {t.fecha_inicio}: {t.observaciones}")
+                    # Buscar medicamentos de este tratamiento
+                    medicamentos = db.query(models.MedicamentoTratamiento).filter(
+                        models.MedicamentoTratamiento.tratamiento_id == t.id
+                    ).all()
+                    for m in medicamentos:
+                        context_parts.append(f"  * Medicamento: {m.nombre_medicamento}, Dosis: {m.dosis}, Frecuencia: {m.frecuencia}")
+
+        else:
+            # Si no se encuentra paciente específico, buscar en la tabla legacy cardio_records por si acaso
+            legacy = db.query(models.CardioRecord).filter(
+                models.CardioRecord.paciente.ilike(f"%{patient_identity}%")
             ).limit(5).all()
-        
-        # Combinar y eliminar duplicados manteniendo el orden
-        seen_ids = set()
-        final_records = []
-        for r in (latest_records + keyword_records):
-            if r.id not in seen_ids:
-                final_records.append(r)
-                seen_ids.add(r.id)
-        
-        return final_records[:5]
+            if legacy:
+                context_parts.append("REGISTROS ENCONTRADOS (Sistema Anterior):")
+                for r in legacy:
+                    fecha_reg_str = r.fecha_registro.strftime('%d/%m/%Y') if r.fecha_registro else "Sin fecha"
+                    context_parts.append(f"- {fecha_reg_str}: {r.diagnostico}, Presión: {r.presion_arterial}")
 
-    # ESTRATEGIA PARA ADMIN: Búsqueda tradicional por palabras clave
-    if not keywords:
-        keywords = [clean_query]
-
-    conditions = []
-    for word in keywords:
-        search_term = f"%{word}%"
-        conditions.append(models.CardioRecord.paciente.ilike(search_term))
-        conditions.append(models.CardioRecord.tipo_arritmia.ilike(search_term))
-        conditions.append(models.CardioRecord.diagnostico.ilike(search_term))
-        conditions.append(models.CardioRecord.sintomas.ilike(search_term))
-        conditions.append(models.CardioRecord.presion_arterial.ilike(search_term))
-
-    return db.query(models.CardioRecord).filter(or_(*conditions)).limit(5).all()
+    # Si no hay paciente o no se encontró nada específico
+    if not context_parts:
+        context_parts.append("No se encontró información específica para el paciente solicitado. Por favor, responde de forma general sobre cardiología.")
+    
+    return "\n".join(context_parts)
