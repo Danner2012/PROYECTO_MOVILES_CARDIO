@@ -28,17 +28,20 @@ class RecentAlerts extends StatelessWidget {
           ),
           SizedBox(
             width: double.infinity,
-            child: DataTable(
-              columnSpacing: defaultPadding,
-              columns: [
-                DataColumn(label: Text("Paciente")),
-                DataColumn(label: Text("Tipo")),
-                DataColumn(label: Text("Riesgo")),
-                DataColumn(label: Text("Fecha")),
-              ],
-              rows: List.generate(
-                alerts.length,
-                (index) => alertDataRow(alerts[index]),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: defaultPadding,
+                columns: [
+                  DataColumn(label: Text("Paciente")),
+                  DataColumn(label: Text("Tipo")),
+                  DataColumn(label: Text("Riesgo")),
+                  DataColumn(label: Text("Fecha")),
+                ],
+                rows: List.generate(
+                  alerts.length,
+                  (index) => alertDataRow(alerts[index]),
+                ),
               ),
             ),
           ),

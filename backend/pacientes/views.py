@@ -538,12 +538,39 @@ def obtener_resumen_dashboard(request):
             "motivo": control.diagnostico_ecg,
         })
 
+    # Estadísticas adicionales para gráficas
+    from django.db.models import Count
+    distribucion_riesgo_qs = (
+        Arritmia.objects
+        .filter(doctor=request.user)
+        .values('nivel_riesgo')
+        .annotate(cantidad=Count('id'))
+    )
+    distribucion_riesgo = [
+        {"nivel_riesgo": item['nivel_riesgo'], "cantidad": item['cantidad']}
+        for item in distribucion_riesgo_qs
+    ]
+
+    distribucion_tipo_qs = (
+        Arritmia.objects
+        .filter(doctor=request.user)
+        .values('tipo_arritmia')
+        .annotate(cantidad=Count('id'))
+        .order_by('-cantidad')[:5]
+    )
+    distribucion_tipo = [
+        {"tipo_arritmia": item['tipo_arritmia'], "cantidad": item['cantidad']}
+        for item in distribucion_tipo_qs
+    ]
+
     return Response({
         "total_pacientes": total_pacientes,
         "arritmias_activas": pacientes_arritmias_activas,
         "total_alertas_recientes": len(alertas_data),
         "alertas_recientes": alertas_data,
         "proximas_consultas": consultas_data,
+        "distribucion_riesgo": distribucion_riesgo,
+        "distribucion_tipo": distribucion_tipo,
     })
 
 

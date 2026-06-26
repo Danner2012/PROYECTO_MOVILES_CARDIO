@@ -10,10 +10,20 @@ import 'components/recent_files.dart';
 import 'components/storage_details.dart';
 
 import 'package:flutter_frontend/features/dashboard/logic/dashboard_doctor_provider.dart';
+import 'package:flutter_frontend/features/pacientes/logic/pacientes_provider.dart';
 
 import 'components/my_files_doctor.dart';
 import 'components/recent_alerts.dart';
 import 'components/next_appointments.dart';
+import 'components/quick_actions.dart';
+import 'components/doctor_charts.dart';
+
+// Importaciones de los componentes del Paciente
+import 'components/patient_quick_actions.dart';
+import 'components/my_health_summary.dart';
+import 'components/health_evolution_chart.dart';
+import 'components/active_treatments.dart';
+import 'components/patient_recent_exams.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -26,9 +36,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      if (authProvider.user?.rol.toLowerCase() == 'doctor') {
+      final rol = authProvider.user?.rol.toLowerCase();
+      
+      if (rol == 'doctor') {
         Provider.of<DashboardDoctorProvider>(context, listen: false)
             .fetchDashboardData(authProvider.token!);
+      } else if (rol == 'paciente') {
+        final pacientesProv = Provider.of<PacientesProvider>(context, listen: false);
+        pacientesProv.fetchMisControles(authProvider.token!);
+        pacientesProv.fetchMisArritmias(authProvider.token!);
+        pacientesProv.fetchMisExamenes(authProvider.token!);
+        pacientesProv.fetchMisTratamientos(authProvider.token!);
       }
     });
   }
@@ -58,33 +76,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildRoleTitle(context, rol),
                       SizedBox(height: defaultPadding),
                       
-                      // MyFiles: Visible para todos menos quizás pacientes (o personalizado)
-                      if (rol == 'doctor') MyFilesDoctor() else if (rol != 'paciente') MyFiles(),
-                      if (rol != 'paciente') SizedBox(height: defaultPadding),
-                      
-                      // RecentFiles: Visible para todos
-                      if (rol == 'doctor') RecentAlerts() else RecentFiles(),
-                      
-                      if (Responsive.isMobile(context))
+                      // Vistas condicionales según el Rol
+                      if (rol == 'doctor') ...[
+                        QuickActions(),
                         SizedBox(height: defaultPadding),
-                      if (Responsive.isMobile(context)) (rol == 'doctor' ? NextAppointments() : StorageDetails()),
+                        MyFilesDoctor(),
+                        SizedBox(height: defaultPadding),
+                        DoctorCharts(),
+                        SizedBox(height: defaultPadding),
+                        RecentAlerts(),
+                      ] else if (rol == 'paciente') ...[
+                        PatientQuickActions(),
+                        SizedBox(height: defaultPadding),
+                        MyHealthSummary(),
+                        SizedBox(height: defaultPadding),
+                        HealthEvolutionChart(),
+                        SizedBox(height: defaultPadding),
+                        ActiveTreatments(),
+                      ] else ...[
+                        MyFiles(),
+                        SizedBox(height: defaultPadding),
+                        RecentFiles(),
+                      ],
+                      
+                      if (Responsive.isMobile(context)) ...[
+                        SizedBox(height: defaultPadding),
+                        _buildMobileSideContent(rol),
+                      ],
                     ],
                   ),
                 ),
-                if (!Responsive.isMobile(context))
+                if (!Responsive.isMobile(context)) ...[
                   SizedBox(width: defaultPadding),
-                // StorageDetails: Siempre visible en desktop/tablet
-                if (!Responsive.isMobile(context))
                   Expanded(
                     flex: 2,
-                    child: rol == 'doctor' ? NextAppointments() : StorageDetails(),
+                    child: _buildDesktopSideContent(rol),
                   ),
+                ],
               ],
             )
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildMobileSideContent(String rol) {
+    if (rol == 'doctor') {
+      return NextAppointments();
+    } else if (rol == 'paciente') {
+      return const PatientRecentExams();
+    } else {
+      return StorageDetails();
+    }
+  }
+
+  Widget _buildDesktopSideContent(String rol) {
+    if (rol == 'doctor') {
+      return NextAppointments();
+    } else if (rol == 'paciente') {
+      return const PatientRecentExams();
+    } else {
+      return StorageDetails();
+    }
   }
 
   Widget _buildRoleTitle(BuildContext context, String rol) {
