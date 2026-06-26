@@ -4,8 +4,24 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Paciente, ControlCardiologico, HistorialClinico, Arritmia, SeguimientoArritmia, ExamenMedico, Tratamiento
+from .serializers import (
+    PacienteSerializer, 
+    ControlCardiologicoSerializer, 
+    HistorialClinicoSerializer,
+    ArritmiaSerializer,
+    SeguimientoArritmiaSerializer,
+    ExamenMedicoSerializer,
+    TratamientoSerializer
+)
+from .utils import generar_pdf_paciente
+
 from .models import Paciente
 from .serializers import PacienteSerializer, ControlCardiologicoSerializer
 from django.http import JsonResponse
@@ -447,20 +463,6 @@ def agregar_control(request, paciente_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-from django.http import HttpResponse
-from .utils import generar_pdf_paciente
-
-
-from rest_framework_simplejwt.tokens import AccessToken
-from django.contrib.auth import get_user_model
-
-# ... (otras vistas)
-
-from django.utils import timezone
-from datetime import timedelta
-
-# ... (vistas anteriores)
-
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -531,12 +533,39 @@ def obtener_resumen_dashboard(request):
             "motivo": control.diagnostico_ecg,
         })
 
+    # Estadísticas adicionales para gráficas
+    from django.db.models import Count
+    distribucion_riesgo_qs = (
+        Arritmia.objects
+        .filter(doctor=request.user)
+        .values('nivel_riesgo')
+        .annotate(cantidad=Count('id'))
+    )
+    distribucion_riesgo = [
+        {"nivel_riesgo": item['nivel_riesgo'], "cantidad": item['cantidad']}
+        for item in distribucion_riesgo_qs
+    ]
+
+    distribucion_tipo_qs = (
+        Arritmia.objects
+        .filter(doctor=request.user)
+        .values('tipo_arritmia')
+        .annotate(cantidad=Count('id'))
+        .order_by('-cantidad')[:5]
+    )
+    distribucion_tipo = [
+        {"tipo_arritmia": item['tipo_arritmia'], "cantidad": item['cantidad']}
+        for item in distribucion_tipo_qs
+    ]
+
     return Response({
         "total_pacientes": total_pacientes,
         "arritmias_activas": pacientes_arritmias_activas,
         "total_alertas_recientes": len(alertas_data),
         "alertas_recientes": alertas_data,
         "proximas_consultas": consultas_data,
+        "distribucion_riesgo": distribucion_riesgo,
+        "distribucion_tipo": distribucion_tipo,
     })
 
 
@@ -603,37 +632,33 @@ def obtener_mis_tratamientos(request):
 
 
 @api_view(['GET'])
-@permission_classes([]) # Permitimos el acceso para validar el token manualmente
-@authentication_classes([])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def descargar_reporte_paciente(request, paciente_id):
-    # Intentamos obtener el token del header o de la URL
-    token_str = request.query_params.get('token')
-    
-    if not token_str:
-        return Response({"error": "Credenciales no proporcionadas."}, status=status.HTTP_401_UNAUTHORIZED)
+    """
+    Genera y descarga el reporte PDF de un paciente.
+    Acepta el token JWT en el header Authorization: Bearer <token>
+    """
+    if not es_doctor(request.user):
+        return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
 
     try:
-        # Validar el token manualmente
-        access_token = AccessToken(token_str)
-        user_id = access_token['user_id']
-        User = get_user_model()
-        user = User.objects.get(id=user_id)
-        
-        if not es_doctor(user):
-            return Response({"error": "No tienes permisos de Doctor."}, status=status.HTTP_403_FORBIDDEN)
-            
-        paciente = Paciente.objects.get(id=paciente_id, doctor=user)
-        
-        pdf_content = generar_pdf_paciente(paciente, user)
-        
+        paciente = Paciente.objects.get(id=paciente_id, doctor=request.user)
+    except Paciente.DoesNotExist:
+        return Response({"error": "Paciente no encontrado o no pertenece a tu lista."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        pdf_content = generar_pdf_paciente(paciente, request.user)
+
         response = HttpResponse(pdf_content, content_type='application/pdf')
         filename = f"reporte_{paciente.usuario.email}_{datetime.now().strftime('%Y%m%d')}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
+        response['Access-Control-Allow-Origin'] = '*'
+
         return response
-        
+
     except Exception as e:
-        return Response({"error": f"Token inválido o expirado. {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": f"Error al generar el reporte PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # --- Gestión de Tratamientos CRUD ---

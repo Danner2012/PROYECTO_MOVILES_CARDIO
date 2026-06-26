@@ -1,53 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_frontend/features/dashboard/logic/dashboard_doctor_provider.dart';
+import 'package:flutter_frontend/features/pacientes/logic/pacientes_provider.dart';
 import 'package:flutter_frontend/features/dashboard/presentation/responsive.dart';
 import '../../../constants.dart';
 
-class MyFilesDoctor extends StatelessWidget {
-  const MyFilesDoctor({Key? key}) : super(key: key);
+class MyHealthSummary extends StatelessWidget {
+  const MyHealthSummary({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final Size _size = MediaQuery.of(context).size;
-    final dashboardProvider = Provider.of<DashboardDoctorProvider>(context);
-    final data = dashboardProvider.data;
+    final pacientesProvider = Provider.of<PacientesProvider>(context);
+    final perfil = pacientesProvider.perfilPaciente;
 
-    if (dashboardProvider.isLoading) {
+    if (pacientesProvider.isLoading) {
       return const SizedBox(
         height: 150,
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final List<MedicalStatInfo> stats = [
-      MedicalStatInfo(
-        title: "Total Pacientes",
-        value: data?.totalPacientes ?? 0,
-        icon: Icons.people_alt_outlined,
-        color: Colors.blue,
-        subtitle: "Pacientes bajo su cuidado",
+    final controles = perfil?.historialControles ?? [];
+    final ultimoControl = controles.isNotEmpty ? controles.first : null;
+
+    final String presionVal = ultimoControl != null
+        ? "${ultimoControl.presionSistolica}/${ultimoControl.presionDiastolica} mmHg"
+        : "N/A";
+    final int frecuenciaVal = ultimoControl?.frecuenciaCardiaca ?? 0;
+    final int oxigenoval = ultimoControl?.saturacionOxigeno ?? 0;
+    final int medicamentosActivos = perfil?.tratamientos
+            .where((t) => t.estado.toLowerCase() == 'activo')
+            .fold<int>(0, (sum, t) => sum + t.medicamentos.length) ??
+        0;
+
+    final List<HealthStatInfo> stats = [
+      HealthStatInfo(
+        title: "Presión Arterial",
+        value: presionVal,
+        icon: Icons.compress_outlined,
+        color: Colors.blueAccent,
+        subtitle: ultimoControl != null ? "Último: ${ultimoControl.fecha}" : "Sin registros",
       ),
-      MedicalStatInfo(
-        title: "Arritmias Activas",
-        value: data?.arritmiasActivas ?? 0,
-        icon: Icons.favorite_border_outlined,
+      HealthStatInfo(
+        title: "Ritmo Cardíaco",
+        value: frecuenciaVal > 0 ? "$frecuenciaVal lpm" : "N/A",
+        icon: Icons.favorite,
         color: Colors.redAccent,
-        subtitle: "Casos bajo tratamiento",
+        subtitle: frecuenciaVal > 0 ? "Frecuencia en reposo" : "Sin registros",
       ),
-      MedicalStatInfo(
-        title: "Alertas Nuevas",
-        value: data?.totalAlertasRecientes ?? 0,
-        icon: Icons.notification_important_outlined,
+      HealthStatInfo(
+        title: "Oxígeno en Sangre",
+        value: oxigenoval > 0 ? "$oxigenoval%" : "N/A",
+        icon: Icons.bloodtype_outlined,
+        color: Colors.tealAccent,
+        subtitle: oxigenoval > 0 ? "Saturación de oxígeno" : "Sin registros",
+      ),
+      HealthStatInfo(
+        title: "Medicamentos de Hoy",
+        value: "$medicamentosActivos",
+        icon: Icons.medication_liquid_outlined,
         color: Colors.orangeAccent,
-        subtitle: "Riesgo alto o crítico",
-      ),
-      MedicalStatInfo(
-        title: "Consultas Programadas",
-        value: data?.proximasConsultas.length ?? 0,
-        icon: Icons.calendar_month_outlined,
-        color: Colors.greenAccent,
-        subtitle: "Citas próximas registradas",
+        subtitle: "Dosis activas recetadas",
       ),
     ];
 
@@ -55,18 +68,18 @@ class MyFilesDoctor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Resumen Clínico",
+          "Mi Estado de Salud",
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: defaultPadding),
         Responsive(
-          mobile: MedicalCardGridView(
+          mobile: HealthCardGridView(
             crossAxisCount: _size.width < 650 ? 2 : 4,
-            childAspectRatio: _size.width < 650 && _size.width > 350 ? 1.3 : 1,
+            childAspectRatio: _size.width < 650 && _size.width > 350 ? 1.3 : 1.1,
             stats: stats,
           ),
-          tablet: MedicalCardGridView(stats: stats),
-          desktop: MedicalCardGridView(
+          tablet: HealthCardGridView(stats: stats),
+          desktop: HealthCardGridView(
             childAspectRatio: _size.width < 1400 ? 1.2 : 1.5,
             stats: stats,
           ),
@@ -76,8 +89,8 @@ class MyFilesDoctor extends StatelessWidget {
   }
 }
 
-class MedicalCardGridView extends StatelessWidget {
-  const MedicalCardGridView({
+class HealthCardGridView extends StatelessWidget {
+  const HealthCardGridView({
     Key? key,
     this.crossAxisCount = 4,
     this.childAspectRatio = 1.2,
@@ -86,7 +99,7 @@ class MedicalCardGridView extends StatelessWidget {
 
   final int crossAxisCount;
   final double childAspectRatio;
-  final List<MedicalStatInfo> stats;
+  final List<HealthStatInfo> stats;
 
   @override
   Widget build(BuildContext context) {
@@ -100,19 +113,19 @@ class MedicalCardGridView extends StatelessWidget {
         mainAxisSpacing: defaultPadding,
         childAspectRatio: childAspectRatio,
       ),
-      itemBuilder: (context, index) => MedicalStatCard(info: stats[index]),
+      itemBuilder: (context, index) => HealthStatCard(info: stats[index]),
     );
   }
 }
 
-class MedicalStatInfo {
+class HealthStatInfo {
   final String title;
-  final int value;
+  final String value;
   final IconData icon;
   final Color color;
   final String subtitle;
 
-  MedicalStatInfo({
+  HealthStatInfo({
     required this.title,
     required this.value,
     required this.icon,
@@ -121,13 +134,13 @@ class MedicalStatInfo {
   });
 }
 
-class MedicalStatCard extends StatelessWidget {
-  const MedicalStatCard({
+class HealthStatCard extends StatelessWidget {
+  const HealthStatCard({
     Key? key,
     required this.info,
   }) : super(key: key);
 
-  final MedicalStatInfo info;
+  final HealthStatInfo info;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +172,7 @@ class MedicalStatCard extends StatelessWidget {
                   size: 22,
                 ),
               ),
-              const Icon(Icons.analytics_outlined, color: Colors.white24, size: 20)
+              const Icon(Icons.monitor_heart_outlined, color: Colors.white24, size: 20)
             ],
           ),
           const SizedBox(height: 8),
@@ -168,17 +181,19 @@ class MedicalStatCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: Colors.white70,
               fontWeight: FontWeight.w500,
             ),
           ),
           Text(
-            "${info.value}",
+            info.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 26,
+                  fontSize: 22,
                 ),
           ),
           Text(

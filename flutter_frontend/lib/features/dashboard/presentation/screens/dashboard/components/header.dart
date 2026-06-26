@@ -118,9 +118,34 @@ class SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final menuController = Provider.of<MenuAppController>(context);
+    final rol = authProvider.user?.rol.toLowerCase() ?? 'paciente';
+    final hint = rol == 'doctor' ? "Buscar pacientes..." : "Buscar...";
+
+    final textController = TextEditingController();
+
+    void performSearch() {
+      final query = textController.text.trim();
+      if (query.isNotEmpty) {
+        if (rol == 'doctor') {
+          // Redirigir al listado de pacientes
+          menuController.setSelectedPage("pacientes");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Buscando paciente: '$query'"),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+
     return TextField(
+      controller: textController,
+      onSubmitted: (_) => performSearch(),
       decoration: InputDecoration(
-        hintText: "Search",
+        hintText: hint,
         fillColor: secondaryColor,
         filled: true,
         border: OutlineInputBorder(
@@ -128,7 +153,7 @@ class SearchField extends StatelessWidget {
           borderRadius: const BorderRadius.all(Radius.circular(10)),
         ),
         suffixIcon: InkWell(
-          onTap: () {},
+          onTap: performSearch,
           child: Container(
             padding: EdgeInsets.all(defaultPadding * 0.75),
             margin: EdgeInsets.symmetric(horizontal: defaultPadding / 2),
