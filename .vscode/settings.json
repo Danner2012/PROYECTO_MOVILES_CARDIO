@@ -10,7 +10,6 @@
         "statusBar.debuggingBackground": "#6D4C41",
         "statusBar.debuggingForeground": "#FBF9F8",
         "statusBar.noFolderBackground": "#6D4C41",
-        "statusBar.noFolderForeground": "#FBF9F8",
-        "cmake.sourceDirectory": "${workspaceFolder}/flutter_frontend/windows"
+        "statusBar.noFolderForeground": "#FBF9F8"
     }
 }

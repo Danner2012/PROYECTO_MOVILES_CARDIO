@@ -41,6 +41,10 @@ dependencies:
   flutter_svg: ^2.0.10
   fl_chart: ^1.2.0
   image_picker: ^1.2.2
+  shared_preferences: ^2.5.5
+  intl: ^0.20.3
+  file_picker: ^3.0.4
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

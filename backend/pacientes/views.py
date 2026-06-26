@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from .models import Paciente
 from .serializers import PacienteSerializer, ControlCardiologicoSerializer
+from django.http import JsonResponse
+import random # Lo importamos para simular variaciones reales de un ECG
 
 User = get_user_model()
 
@@ -747,3 +749,17 @@ def obtener_metricas_ecg(request):
             {"error": f"Error en la consulta de registros_ecg: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+    from django.http import JsonResponse
+
+def obtener_ecg_metrics(request):
+    # Generamos una lista de diccionarios, cada uno con su 'id' y su valor numérico
+    datos_estructurados = []
+    
+    for i in range(20):
+        datos_estructurados.append({
+            "id": i,                                 # El ID que busca tu frontend
+            "value": random.uniform(-0.5, 1.5),      # El valor del punto ECG
+            # "valor": random.uniform(-0.5, 1.5),    <-- Si no grafica, cambia "value" por "valor" o "metric" según use tu Flutter
+        })
+        
+    return JsonResponse(datos_estructurados, safe=False)
