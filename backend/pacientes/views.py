@@ -22,6 +22,10 @@ from .serializers import (
 )
 from .utils import generar_pdf_paciente
 
+from .models import Paciente
+from .serializers import PacienteSerializer, ControlCardiologicoSerializer
+from django.http import JsonResponse
+import random # Lo importamos para simular variaciones reales de un ECG
 
 User = get_user_model()
 
@@ -711,3 +715,76 @@ def detalle_tratamiento(request, pk):
     elif request.method == 'DELETE':
         tratamiento.delete()
         return Response({"mensaje": "Tratamiento eliminado."}, status=status.HTTP_200_OK)
+
+# =========================================================================
+# ENDPOINT ADAPTADO A LAS COLUMNAS REALES DE REGISTROS_ECG
+# =========================================================================
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def obtener_metricas_ecg(request):
+    """
+    Extrae el historial de telemetría directamente desde las columnas reales
+    de 'registros_ecg' en 'ecg_db'.
+    """
+    try:
+        with connections['ecg_db'].cursor() as cursor:
+            # Consultamos las columnas reales según tu esquema de pgAdmin
+            query = """
+                SELECT 
+                    id, 
+                    bpm, 
+                    bpm_average, 
+                    hrv, 
+                    beat_detected, 
+                    electrodes_connected, 
+                    created_at 
+                FROM registros_ecg 
+                ORDER BY id DESC 
+                LIMIT 50;
+            """
+            cursor.execute(query)
+            
+            columnas = [col[0] for col in cursor.description]
+            resultados = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+        datos_formateados = []
+        for registro in resultados:
+            dt = registro.get("created_at")
+            # Extraemos fecha y hora del timestamp con zona horaria (created_at)
+            fecha_str = dt.strftime("%d/%m/%Y") if hasattr(dt, "strftime") else str(dt or "")
+            hora_str = dt.strftime("%H:%M:%S") if hasattr(dt, "strftime") else str(dt or "")
+            
+            datos_formateados.append({
+                "id": str(registro.get("id", "")),
+                "fecha": fecha_str,
+                "hora": hora_str,
+                "bpm": str(registro.get("bpm", "0")),
+                "bpm_average": str(registro.get("bpm_average", "0")),
+                "hrv": str(registro.get("hrv", "0")),
+                "beat_detected": "Sí" if registro.get("beat_detected") is True else "No",
+                "electrodes_connected": "Conectado" if registro.get("electrodes_connected") is True else "Desconectado",
+                "estado": "Normal" if float(registro.get("bpm", 0)) <= 100 else "Taquicardia"
+            })
+
+        return Response(datos_formateados, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": f"Error en la consulta de registros_ecg: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    from django.http import JsonResponse
+
+def obtener_ecg_metrics(request):
+    # Generamos una lista de diccionarios, cada uno con su 'id' y su valor numérico
+    datos_estructurados = []
+    
+    for i in range(20):
+        datos_estructurados.append({
+            "id": i,                                 # El ID que busca tu frontend
+            "value": random.uniform(-0.5, 1.5),      # El valor del punto ECG
+            # "valor": random.uniform(-0.5, 1.5),    <-- Si no grafica, cambia "value" por "valor" o "metric" según use tu Flutter
+        })
+        
+    return JsonResponse(datos_estructurados, safe=False)

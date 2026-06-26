@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_frontend/features/auth/logic/auth_provider.dart';
 import 'package:flutter_frontend/features/dashboard/logic/menu_app_controller.dart';
 import 'package:flutter_frontend/features/dashboard/presentation/responsive.dart';
+import 'package:flutter_frontend/features/pacientes/presentation/screens/ecg_screen.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
@@ -153,6 +154,25 @@ class SideMenu extends StatelessWidget {
                 if (!Responsive.isDesktop(context)) {
                   Navigator.pop(context);
                 }
+              },
+            ),
+            if (rol == 'paciente')
+            DrawerListTile(
+              title: "Monitoreo ECG",
+              svgSrc: "assets/icons/menu_dashboard.svg",
+              press: () {
+                // 1. Si está en móvil o tablet, cerramos el drawer lateral primero
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+                
+                // 2. Abrimos la pantalla de ECG ocupando el 100% de la ventana
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EcgScreen(),
+                  ),
+                );
               },
             ),
           if (rol == 'administrador' || rol == 'superadmin')
