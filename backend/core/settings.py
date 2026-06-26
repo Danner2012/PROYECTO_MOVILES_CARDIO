@@ -113,6 +113,14 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT'),
+    },
+    'ecg_db': {  # <--- AGREGA ESTA SECCIÓN PARALELA
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ecg_db',
+        'USER': 'postgres',
+        'PASSWORD': '123456789', # Coloca tu contraseña real de Postgres
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

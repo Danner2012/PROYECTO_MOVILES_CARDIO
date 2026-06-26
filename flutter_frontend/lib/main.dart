@@ -11,6 +11,7 @@ import 'features/pacientes/logic/pacientes_provider.dart'; // ¡Añadido!
 import 'features/pacientes/logic/patient_ollama_provider.dart';
 import 'features/dashboard/logic/dashboard_doctor_provider.dart';
 
+
 // --- Tus Pantallas ---
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/dashboard/presentation/screens/main/main_screen.dart';
@@ -46,8 +47,9 @@ class MyApp extends StatelessWidget {
       title: 'Cardio Project',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const SplashScreen(),
+      initialRoute: '/',
       routes: {
+        '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => MainScreen(),
         '/profile': (context) => const ProfileScreen(),
