@@ -199,8 +199,8 @@ class _EcgScreenState extends State<EcgScreen> with TickerProviderStateMixin {
       setState(() {
         _isHardwareConnected = false;
         _deviceStatus = 'Desconectado';
-        _currentBpm = '--';
-        _currentHrv = '--';
+        _currentBpm = '---';
+        _currentHrv = '---';
         _generalDiagnostic = 'Sin Señal';
       });
     }
