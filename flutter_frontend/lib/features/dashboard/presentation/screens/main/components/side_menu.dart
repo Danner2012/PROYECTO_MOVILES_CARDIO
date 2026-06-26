@@ -110,6 +110,17 @@ class SideMenu extends StatelessWidget {
                 }
               },
             ),
+          if (rol == 'doctor')
+            DrawerListTile(
+              title: "9. Análisis IA (ECG)",
+              svgSrc: "assets/icons/menu_task.svg",
+              press: () {
+                menuController.setSelectedPage("ia_prediction");
+                if (!Responsive.isDesktop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           if (rol == 'paciente')
             DrawerListTile(
               title: "Mis Arritmias",
