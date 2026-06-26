@@ -301,7 +301,7 @@ class _EcgScreenState extends State<EcgScreen> with TickerProviderStateMixin {
           color: Colors.blueAccent,
         ),
         _buildCard(
-          title: 'HARDWARE ESP32',
+          title: 'HARDWARE wifi',
           value: _deviceStatus,
           icon: Icon(Icons.router, color: _isHardwareConnected ? Colors.greenAccent : Colors.redAccent, size: 24),
           color: Colors.greenAccent,
