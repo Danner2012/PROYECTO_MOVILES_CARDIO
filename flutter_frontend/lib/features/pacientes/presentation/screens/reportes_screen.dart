@@ -265,13 +265,14 @@ class _ReportesScreenState extends State<ReportesScreen> {
     final pacienteId = _pacienteSeleccionado!.id;
     final emailPaciente = _pacienteSeleccionado!.email;
     
-    final url = Uri.parse('http://127.0.0.1:8000/api/pacientes/$pacienteId/reporte-pdf/');
+    final url = Uri.parse('http://localhost:8000/api/pacientes/$pacienteId/reporte-pdf/');
 
     try {
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $token',
+          'Accept': 'application/pdf',
         },
       );
 
@@ -284,17 +285,29 @@ class _ReportesScreenState extends State<ReportesScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Reporte generado correctamente')),
+            const SnackBar(
+              content: Text('✅ Reporte generado correctamente'),
+              backgroundColor: Color(0xFF00BFA5),
+            ),
           );
         }
       } else {
-        throw Exception('Error del servidor: ${response.statusCode}');
+        // Mostrar el mensaje real del servidor para diagnóstico
+        String errorMsg = 'Error del servidor: ${response.statusCode}';
+        try {
+          errorMsg += ' - ${response.body}';
+        } catch (_) {}
+        throw Exception(errorMsg);
       }
     } catch (e) {
       debugPrint('Error descargando PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al generar reporte: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text('❌ Error al generar reporte: $e'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 6),
+          ),
         );
       }
     } finally {
